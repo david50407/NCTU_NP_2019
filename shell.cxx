@@ -1,5 +1,8 @@
 #include <unistd.h>
+#include <pwd.h>
 #include <cstdio>
+#include <cstdlib>
+#include <climits>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -25,6 +28,8 @@ Shell::Shell() : pm() {
 }
 
 void Shell::run() {
+	initialize_env();
+
 	while (true) {
 		show_prompt();
 		const auto cmds = Command::parse_commands(read_command());
@@ -36,9 +41,15 @@ void Shell::run() {
 		} else if (cmds.front().get_args()[0] == "exit") {
 			::exit(0);
 		}
-			
-		pm.execute_commands(cmds);
+		
+		if (!builtin_command(cmds)) {
+			pm.execute_commands(cmds);
+		}
 	}
+}
+
+void Shell::initialize_env() {
+	::setenv("PATH", "bin:.", 1);
 }
 
 void Shell::show_prompt() {
@@ -53,4 +64,55 @@ std::string Shell::read_command() {
 	}
 
 	return cmd;
+}
+
+bool Shell::builtin_command(const Command::Chain &chain) {
+	return false
+		|| builtin_command_exit(chain) 
+		|| builtin_command_setenv(chain)
+		|| builtin_command_printenv(chain)
+		;
+}
+
+bool Shell::builtin_command_exit(const Command::Chain &chain) {
+	if (chain.front().get_args()[0] == "exit")
+		exit(0);
+
+	return false;
+}
+
+bool Shell::builtin_command_setenv(const Command::Chain &chain) {
+	if (chain.front().get_args()[0] != "setenv")
+		return false;
+
+	const auto &args = chain.front().get_args();
+	if (args.size() != 3) {
+		std::cerr << "Usage: ​setenv [variable name] [value to assign]" << std::endl;
+		return true;
+	}
+
+	auto name = std::string(args[1]);
+	auto value = std::string(args[2]);
+	::setenv(name.c_str(), value.c_str(), 1);
+
+	return true;
+}
+
+bool Shell::builtin_command_printenv(const Command::Chain &chain) {
+	if (chain.front().get_args()[0] != "printenv")
+		return false;
+
+	const auto &args = chain.front().get_args();
+	if (args.size() != 2) {
+		std::cerr << "Usage: printenv [variable name]" << std::endl;
+		return true;
+	}
+
+	auto name = std::string(args[1]);
+	char *env;
+	if ((env = ::getenv(name.c_str())) != NULL) {
+		std::cout << env << std::endl;
+	}
+
+	return true;
 }

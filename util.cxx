@@ -21,7 +21,7 @@ int Util::execvp(const std::string program, const std::vector<std::string> args)
 	c_args.push_back(NULL);
 
 	::execvp(program.c_str(), c_args.data()); // won't return
-	std::cerr << "\033[1;31m" << "Cannot exec: " << program.c_str() << "\033[m" << std::endl;
+	std::cerr << "Unknown command: [" << program.c_str() << "]." << std::endl;
 	::exit(errno);
 
 	return 0;

@@ -1,3 +1,9 @@
-*.o
+# VSCode project file
+/.vscode/
 
-npshell
+# Demo working directory
+work_dir/
+
+# Output
+*.o
+/npshell
