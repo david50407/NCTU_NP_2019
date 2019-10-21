@@ -4,7 +4,7 @@ CXX:= g++
 CXXFLAGS:= -I./include --std=c++14 -fPIC -fpermissive
 LD:= g++
 LDFLAGS:= $(CXXFLAGS)
-OBJS:= main.o shell.o command.o util.o
+OBJS:= main.o shell.o command.o util.o process_manager.o signal_handler.o
 EXEC:= npshell
 
 .PHONY: all run clean

@@ -1,21 +1,74 @@
 #include <string>
+#include <iostream>
+#include <initializer_list>
 
 #include <command.h>
 #include <util.h>
 
 using Npshell::Command;
 
-bool Command::execute(const Command::Cmdlist cmds) {
-	return cmd_exit(cmds) || cmd_execute(cmds);
-}
+Command::Command() : Command({}) {}
+Command::Command(const std::initializer_list<std::string> args) :
+	args(args), redirect_out("") {}
 
-bool Command::cmd_exit(const Command::Cmdlist &cmds) {
-	if ("exit" == cmds[0])
-		exit(0);
-	return false;
-}
+Command::~Command() {}
 
-bool Command::cmd_execute(const Command::Cmdlist &cmds) {
-	const int status = Util::execvp(cmds[0], cmds);
-	return status == 0;
+Command::Chain Command::parse_commands(const std::string &str) {
+	Command::Chain chain = { Command() };
+	Command::Cmdlist args = { "" };
+	
+	// Parse args
+	for (auto it = str.begin(); it != str.end(); ++it) {
+		auto &now = args.back();
+		switch (*it) {
+			case ' ': // split command arguments
+				if (now.size() > 0) {
+					args.emplace_back(std::string());
+				}
+				break;
+			case '>':
+			case '|':
+				if (now.size() > 0) {
+					args.emplace_back(std::string());
+				}
+				args.back() += *it;
+				args.emplace_back(std::string());
+				break;
+			default:
+				now += *it;
+		}
+	}
+	
+	// Parse commands
+	for (auto it = args.begin(); it != args.end(); ++it) {
+		auto &now = chain.back();
+		if (it->size() == 1 && (*it)[0] == '>') {
+			if (now.args.size() == 0)
+				goto syntax_error;
+			if (++it == args.end())
+				goto syntax_error;
+			if (now.redirect_out.size() > 0 )
+				goto syntax_error;
+			now.redirect_out = std::string(*it);
+			continue;
+		}
+		if (it->size() == 1 && (*it)[0] == '|') {
+			if (now.args.size() == 0)
+				goto syntax_error;
+			if (++it == args.end())
+				goto syntax_error;
+			chain.emplace_back(Command({*it}));
+			continue;
+		}
+		if (now.redirect_out.size() > 0)
+			goto syntax_error;
+		now.args.push_back(*it);
+	}
+
+	return chain;
+
+syntax_error: ;
+	return {
+		Command({"$__error", "Syntax error."})
+	};
 }

@@ -6,17 +6,38 @@
 
 #include <shell.h>
 #include <command.h>
+#include <signal_handler.hxx>
 
 using Npshell::Shell;
+using Npshell::Command;
+using Npshell::SignalHandler;
 
-Shell::Shell() {}
+Shell::Shell() : pm() {
+	auto quit_handler = [=] (const int signal) {
+		std::cin.clear();
+		std::cout << std::endl;
+		show_prompt();
+		std::cout.flush();
+	};
+
+	SignalHandler::subscribe(SIGINT, quit_handler);
+	SignalHandler::subscribe(SIGQUIT, quit_handler);
+}
 
 void Shell::run() {
 	while (true) {
 		show_prompt();
-		const std::string cmd = read_command();
-		if (!parse_command(cmd))
-			break;
+		const auto cmds = Command::parse_commands(read_command());
+		if (cmds.size() == 0) {
+			continue;
+		} else if (cmds.front().get_args()[0] == "$__error") {
+			std::cout << "\033[1;31m" << cmds.front().get_args()[1] << "\033[m" << std::endl;
+			continue;
+		} else if (cmds.front().get_args()[0] == "exit") {
+			::exit(0);
+		}
+			
+		pm.execute_commands(cmds);
 	}
 }
 
@@ -32,23 +53,4 @@ std::string Shell::read_command() {
 	}
 
 	return cmd;
-}
-
-bool Shell::parse_command(const std::string cmd) {
-	Command::Cmdlist cmds;
-	cmds.push_back(std::string());
-	
-	for (auto it = cmd.begin(); it < cmd.end(); ++it) {
-		auto &now = cmds.back();
-		switch (*it) {
-			case ' ': // split command arguments
-				cmds.push_back(std::string());
-				break;
-			default:
-				now += *it;
-		}
-	}
-
-	Command::execute(cmds);
-	return true;
 }
