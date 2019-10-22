@@ -10,6 +10,7 @@
 #include <shell.h>
 #include <command.h>
 #include <signal_handler.hxx>
+#include <logger.hxx>
 
 using Npshell::Shell;
 using Npshell::Command;
@@ -36,7 +37,7 @@ void Shell::run() {
 		if (cmds.size() == 0) {
 			continue;
 		} else if (cmds.front().get_args()[0] == "$__error") {
-			std::cout << "\033[1;31m" << cmds.front().get_args()[1] << "\033[m" << std::endl;
+			DBG("error: " << cmds.front().get_args()[1]);
 			continue;
 		} else if (cmds.front().get_args()[0] == "exit") {
 			::exit(0);
@@ -89,7 +90,7 @@ bool Shell::builtin_command_setenv(const Command::Chain &chain) {
 
 	const auto &args = chain.front().get_args();
 	if (args.size() != 3) {
-		std::cerr << "Usage: ​setenv [variable name] [value to assign]" << std::endl;
+		DBG("Usage: ​setenv [variable name] [value to assign]");
 		return true;
 	}
 
@@ -106,7 +107,7 @@ bool Shell::builtin_command_printenv(const Command::Chain &chain) {
 
 	const auto &args = chain.front().get_args();
 	if (args.size() != 2) {
-		std::cerr << "Usage: printenv [variable name]" << std::endl;
+		DBG("Usage: printenv [variable name]");
 		return true;
 	}
 

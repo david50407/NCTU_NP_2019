@@ -9,6 +9,7 @@
 #include <signal_handler.hxx>
 #include <process_manager.h>
 #include <util.h>
+#include <logger.hxx>
 
 using Npshell::Process;
 using Npshell::ProcessList;
@@ -47,7 +48,7 @@ void ProcessManager::execute_commands(const Command::Chain &chain) {
 			fd[PipeOut] = -1;
 		} else {
 			if (!Util::pipe(fd)) {
-				std::cerr << "** Connot create pipe **" << ::strerror(errno) << std::endl;
+				DBG("pipe: failed: " << ::strerror(errno));
 				goto wait_to_kill;
 			}
 		}
@@ -59,14 +60,14 @@ void ProcessManager::execute_commands(const Command::Chain &chain) {
 		int forksleep = 2;
 
 		while ((process.pid = ::fork()) < 0 && errno == EAGAIN) {
-			std::cerr << "fork: retry: " << ::strerror(errno) << std::endl;
+			DBG("fork: retry: " << ::strerror(errno));
 			waitchld();
 			sleep(forksleep);
 			forksleep <<= 1;
 		}
 
 		if (process.pid == -1) {
-			std::cerr << "fork: failed" << std::endl;
+			DBG("fork: failed: " << ::strerror(errno));
 			goto wait_to_kill;
 		}
 
@@ -115,7 +116,7 @@ void ProcessManager::wait_proc(const pid_t pgid) {
 
 		if (pid == -1) {
 			if (errno != ECHILD)
-				std::cerr << "** Waitpid Error " << errno << " **" << std::endl;
+				DBG("waitid: retry: " << ::strerror(errno));
 			break;
 		}
 	}
