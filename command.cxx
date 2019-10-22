@@ -38,6 +38,9 @@ Command::Chain Command::parse_commands(const std::string &str) {
 				now += *it;
 		}
 	}
+	if (args.back().empty()) {
+		args.pop_back();
+	}
 	
 	// Parse commands
 	for (auto it = args.begin(); it != args.end(); ++it) {

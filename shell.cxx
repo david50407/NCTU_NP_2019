@@ -36,11 +36,6 @@ void Shell::run() {
 		const auto cmds = Command::parse_commands(read_command());
 		if (cmds.size() == 0) {
 			continue;
-		} else if (cmds.front().get_args()[0] == "$__error") {
-			DBG("error: " << cmds.front().get_args()[1]);
-			continue;
-		} else if (cmds.front().get_args()[0] == "exit") {
-			::exit(0);
 		}
 		
 		if (!builtin_command(cmds)) {
@@ -69,16 +64,26 @@ std::string Shell::read_command() {
 
 bool Shell::builtin_command(const Command::Chain &chain) {
 	return false
+		|| builtin_command_$__error(chain)
 		|| builtin_command_exit(chain) 
 		|| builtin_command_setenv(chain)
 		|| builtin_command_printenv(chain)
 		;
 }
 
+bool Shell::builtin_command_$__error(const Command::Chain &chain) {
+	if (chain.front().get_args()[0] == "$__error") {
+		DBG("error: " << chain.front().get_args()[1]);
+		return true;
+	}
+
+	return false;
+}
+
 bool Shell::builtin_command_exit(const Command::Chain &chain) {
 	if (chain.front().get_args()[0] == "exit") {
 		pm.killall();
-		exit(0);
+		::exit(0);
 	}
 
 	return false;
