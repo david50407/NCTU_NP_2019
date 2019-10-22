@@ -75,8 +75,10 @@ bool Shell::builtin_command(const Command::Chain &chain) {
 }
 
 bool Shell::builtin_command_exit(const Command::Chain &chain) {
-	if (chain.front().get_args()[0] == "exit")
+	if (chain.front().get_args()[0] == "exit") {
+		pm.killall();
 		exit(0);
+	}
 
 	return false;
 }

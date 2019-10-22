@@ -22,9 +22,11 @@ namespace Npshell {
 			ProcessManager();
 			~ProcessManager();
 			void execute_commands(const Command::Chain &);
+			void killall();
 
 		private:
 			void wait_proc(const pid_t);
+			void waitchld(bool = false);
 
 		private:
 			std::map<pid_t, ProcessList> __process_groups;

@@ -21,6 +21,9 @@ namespace Npshell {
 				std::signal(SIGQUIT, [] (int signal) {
 						trigger(signal);
 				});
+				std::signal(SIGCHLD, [] (int signal) {
+						trigger(signal);
+				});
 			}
 			static void subscribe(const int signal, const Callback &callback) {
 				__subscribers[signal].push_back(callback);
