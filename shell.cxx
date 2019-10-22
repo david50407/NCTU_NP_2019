@@ -33,13 +33,15 @@ void Shell::run() {
 
 	while (true) {
 		show_prompt();
-		const auto cmds = Command::parse_commands(read_command());
-		if (cmds.size() == 0) {
+		const auto cmd_chains = Command::parse_commands(read_command());
+		if (cmd_chains.size() == 0) {
 			continue;
 		}
 		
-		if (!builtin_command(cmds)) {
-			pm.execute_commands(cmds);
+		for (auto &cmds : cmd_chains) {
+			if (!builtin_command(cmds)) {
+				pm.execute_commands(cmds);
+			}
 		}
 	}
 }

@@ -4,17 +4,18 @@
 
 #include <command.h>
 #include <util.h>
+#include <logger.hxx>
 
 using Npshell::Command;
 
 Command::Command() : Command({}) {}
 Command::Command(const std::initializer_list<std::string> args) :
-	args(args), redirect_out("") {}
+	args(args), redirect_out(""), pipe_to_n(-1) {}
 
 Command::~Command() {}
 
-Command::Chain Command::parse_commands(const std::string &str) {
-	Command::Chain chain = { Command() };
+std::list<Command::Chain> Command::parse_commands(const std::string &str) {
+	std::list<Command::Chain> chains = { { Command() } };
 	Command::Cmdlist args = { "" };
 	
 	// Parse args
@@ -32,9 +33,13 @@ Command::Chain Command::parse_commands(const std::string &str) {
 					args.emplace_back(std::string());
 				}
 				args.back() += *it;
-				args.emplace_back(std::string());
 				break;
 			default:
+				if (!now.empty() && now[0] == '|') { // Pipe to n-th command
+					if (*it < '0' || '9' < *it) {
+						goto syntax_error;
+					} 
+				}
 				now += *it;
 		}
 	}
@@ -44,6 +49,7 @@ Command::Chain Command::parse_commands(const std::string &str) {
 	
 	// Parse commands
 	for (auto it = args.begin(); it != args.end(); ++it) {
+		auto &chain = chains.back();
 		auto &now = chain.back();
 		if (it->size() == 1 && (*it)[0] == '>') {
 			if (now.args.size() == 0)
@@ -63,15 +69,28 @@ Command::Chain Command::parse_commands(const std::string &str) {
 			chain.emplace_back(Command({*it}));
 			continue;
 		}
+		if ((*it)[0] == '|') {
+			now.pipe_to_n = ::atoi(it->c_str() + 1);
+			chains.emplace_back(Command::Chain{ Command() });
+			continue;
+		}
 		if (now.redirect_out.size() > 0)
 			goto syntax_error;
 		now.args.push_back(*it);
 	}
+	for (auto &chain : chains) {
+		if (chain.back().args.empty()) {
+			chain.pop_back();
+		}
+	}
+	chains.remove_if([](auto &chain) {
+		return chain.empty();
+	});
 
-	return chain;
+	return chains;
 
 syntax_error: ;
-	return {
+	return {{
 		Command({"$__error", "Syntax error."})
-	};
+	}};
 }

@@ -15,13 +15,13 @@ namespace Npshell {
 		private:
 			std::vector<std::string> args;
 			std::string redirect_out;
+			int pipe_to_n;
 
 		public:
 			~Command();
 			std::vector<std::string> get_args() const { return args; }
 			std::string get_redirect_out() { return redirect_out; }
-			bool builtin_execute();
-			static Chain parse_commands(const std::string &);
+			static std::list<Chain> parse_commands(const std::string &);
 
 		private:
 			Command();
