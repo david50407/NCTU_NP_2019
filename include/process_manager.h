@@ -8,6 +8,7 @@
 
 #define PipeIn 0
 #define PipeOut 1
+#define PipeErr 2
 
 namespace Npshell {
 	struct Process {

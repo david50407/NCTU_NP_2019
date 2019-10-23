@@ -10,7 +10,7 @@ using Npshell::Command;
 
 Command::Command() : Command{std::initializer_list<std::string>{}} {}
 Command::Command(const std::initializer_list<std::string> args) :
-	args(args), redirect_out(""), pipe_to_n(-1) {}
+	args(args), redirect_out(""), pipe_to_n(-1), pipe_stderr(false) {}
 
 Command::~Command() {}
 
@@ -29,13 +29,14 @@ std::list<Command::Chain> Command::parse_commands(const std::string &str) {
 				break;
 			case '>':
 			case '|':
+			case '!':
 				if (now.size() > 0) {
 					args.emplace_back(std::string());
 				}
 				args.back() += *it;
 				break;
 			default:
-				if (!now.empty() && now[0] == '|') { // Pipe to n-th command
+				if (!now.empty() && (now[0] == '|' || now[0] == '!')) { // Pipe to n-th command
 					if (*it < '0' || '9' < *it) {
 						goto syntax_error;
 					} 
@@ -69,10 +70,13 @@ std::list<Command::Chain> Command::parse_commands(const std::string &str) {
 			chain.emplace_back(Command({*it}));
 			continue;
 		}
-		if ((*it)[0] == '|') {
-			now.pipe_to_n = ::atoi(it->c_str() + 1);
-			chains.emplace_back(Command::Chain{ Command() });
-			continue;
+		switch (auto pipe_type = (*it)[0]; pipe_type) {
+			case '!':
+			case '|':
+				now.pipe_to_n = ::atoi(it->c_str() + 1);
+				now.pipe_stderr = pipe_type == '!';
+				chains.emplace_back(Command::Chain{ Command() });
+				continue;
 		}
 		if (now.redirect_out.size() > 0)
 			goto syntax_error;

@@ -16,6 +16,7 @@ namespace Npshell {
 			std::vector<std::string> args;
 			std::string redirect_out;
 			int pipe_to_n;
+			bool pipe_stderr;
 
 		public:
 			Command();
@@ -24,6 +25,7 @@ namespace Npshell {
 			std::vector<std::string> get_args() const { return args; }
 			std::string get_redirect_out() { return redirect_out; }
 			int pipe_to() const { return pipe_to_n; }
+			bool redirect_stderr() const { return pipe_stderr; }
 			static std::list<Chain> parse_commands(const std::string &);
 	};
 }; // namespace Npshell

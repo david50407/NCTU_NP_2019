@@ -85,6 +85,9 @@ void ProcessManager::execute_commands(const Command::Chain &chain) {
 		}
 		if (process.fd[PipeOut] != -1) {
 			::dup2(process.fd[PipeOut], PipeOut);
+			if (process.cmd.redirect_stderr()) {
+				::dup2(process.fd[PipeOut], PipeErr);
+			}
 			::close(process.fd[PipeOut]);
 		}
 
