@@ -3,27 +3,16 @@
 
 #include <istream>
 
-#include <ext/fdbuf>
+#include <ext/ifdbuf>
 
 namespace ext {
 	class ifdstream : public std::istream {
 		public:
-			ifdstream() = delete;
-			explicit ifdstream(int fd) : std::istream(0), __buffer(fd) {
-				std::istream::rdbuf(&__buffer);
-				init(&__buffer);
+			ifdstream(int fd) : std::istream(0), __buffer(fd) {
+				rdbuf(&__buffer);
 			}
-
-			fdbuf* rdbuf() const { return const_cast<fdbuf*>(&__buffer); }
-			bool is_open() { return rdbuf()->is_open(); }
-			void close() {
-				if (rdbuf()->close() == nullptr) {
-					setstate(failbit);
-				}
-			}
-
 		private:
-			fdbuf __buffer;
+			ifdbuf __buffer;
 	};
 }; // namespace ext
 

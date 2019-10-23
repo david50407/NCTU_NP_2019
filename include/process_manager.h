@@ -35,7 +35,7 @@ namespace Npshell {
 		private:
 			void wait_proc(const pid_t);
 			void waitchld(bool = false);
-			int process_requested_pipe(ProcessList &);
+			int process_requested_pipe(ProcessList &, int);
 
 		private:
 			std::map<pid_t, ProcessList> __process_groups;

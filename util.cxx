@@ -8,6 +8,7 @@
 
 #include <ext/ifdstream>
 #include <util.h>
+#include <logger.hxx>
 
 using Npshell::Util;
 
@@ -38,13 +39,19 @@ bool Util::pipe(int fd[2]) {
 }
 
 void Util::multiplexer(std::list<int> fds) {
-	char buffer[1024];
+	char buffer[1024 + 1];
 
 	for (auto fd : fds) {
 		ext::ifdstream fdin(fd);
 		
-		while (fdin.read(buffer, sizeof(buffer))) {
-			std::cout << buffer;
+		while (!fdin.eof()) {
+			fdin.read(buffer, sizeof(buffer) - 1);
+			if (auto size = fdin.gcount(); size > 0) {
+				buffer[size] = '\0';
+				std::cout << buffer << std::flush;
+			}
 		}
+
+		::close(fd);
 	}
 }

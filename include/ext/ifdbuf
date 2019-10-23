@@ -1,0 +1,47 @@
+#if !defined(__EXT_IFDBUF__)
+#define __EXT_IFDBUF__
+
+#include <unistd.h>
+#include <cstring>
+#include <cstdio>
+#include <streambuf>
+
+namespace ext {
+	class ifdbuf : public std::streambuf
+	{
+		public:
+			ifdbuf(int fd) : __fd(fd) {
+				setg(__buffer + PUTBACK_SIZE, __buffer + PUTBACK_SIZE, __buffer + PUTBACK_SIZE);
+			}
+
+		protected:
+			virtual int_type underflow() {
+				if (gptr() < egptr()) {
+					return traits_type::to_int_type(*gptr());
+				}
+
+				int putback = gptr() - eback(); 
+				if (putback > PUTBACK_SIZE) {
+					putback = PUTBACK_SIZE;
+				}
+
+				::memmove(__buffer + PUTBACK_SIZE - putback, gptr() - putback, putback);
+				
+				auto size = ::read(__fd, __buffer + PUTBACK_SIZE, BUFFER_SIZE);
+				if (size < 1) {
+					return traits_type::eof();
+				}
+				setg(__buffer + PUTBACK_SIZE - putback, __buffer + PUTBACK_SIZE, __buffer + PUTBACK_SIZE + size);
+
+				return traits_type::to_int_type(*gptr());
+			}
+
+		private:
+			static const std::streamsize BUFFER_SIZE = 1024;
+			static const std::streamsize PUTBACK_SIZE = 4; 
+			int __fd;
+			char __buffer[BUFFER_SIZE + PUTBACK_SIZE];
+	};
+}; // namespace ext
+
+#endif // !defined(__EXT_IFDBUF__)

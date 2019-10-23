@@ -30,10 +30,11 @@ ProcessManager::~ProcessManager() {
 
 void ProcessManager::execute_commands(const Command::Chain &chain) {
 	ProcessList pl;
-	int lastPipeInfd = process_requested_pipe(pl);
-	pid_t pgid = pl.empty() ? -1 : pl.back().pid;
+	int lastPipeInfd = -1;
 
 	for (auto it = chain.begin(); it != chain.end(); ++it) {
+		decount_requested_pipe();
+		lastPipeInfd = process_requested_pipe(pl, lastPipeInfd);
 		auto &command = *it;
 		int fd[2];
 		if (it + 1 == chain.end() && command.pipe_to() == -1) {
@@ -49,13 +50,13 @@ void ProcessManager::execute_commands(const Command::Chain &chain) {
 
 		auto &process = pl.back();
 
-		int forksleep = 2;
-
+		int forksleep = 1;
 		while ((process.pid = ::fork()) < 0 && errno == EAGAIN) {
 			DBG("fork: retry: " << ::strerror(errno));
 			waitchld();
 			sleep(forksleep);
 			forksleep <<= 1;
+			if (forksleep > 8) { forksleep = 8; }
 		}
 
 		if (process.pid == -1) {
@@ -64,9 +65,7 @@ void ProcessManager::execute_commands(const Command::Chain &chain) {
 		}
 
 		if (process.pid > 0) { // parent
-			if (pgid == -1)
-				pgid = process.pid;
-			Util::setpgid(process.pid, pgid);
+			Util::setpgid(process.pid, pl.front().pid);
 
 			if (process.fd[PipeIn] != -1)
 				::close(process.fd[PipeIn]);
@@ -94,10 +93,11 @@ void ProcessManager::execute_commands(const Command::Chain &chain) {
 
 wait_to_kill: ;
 
-	if (pgid == -1) {
+	if (pl.empty()) {
 		return;
 	}
 
+	auto pgid = pl.front().pid;
 	fg_pgid = pgid;
 	__process_groups[pgid] = pl;
 
@@ -158,7 +158,7 @@ void ProcessManager::decount_requested_pipe() {
 	}
 }
 
-int ProcessManager::process_requested_pipe(ProcessList &pl) {
+int ProcessManager::process_requested_pipe(ProcessList &pl, int infd) {
 	std::list<RequestPipe> requested_pipes = {};
 	for (auto it = __request_pipes.begin(); it != __request_pipes.end(); ) {
 		if (it->request_number > 0) {
@@ -171,7 +171,10 @@ int ProcessManager::process_requested_pipe(ProcessList &pl) {
 	}
 
 	if (requested_pipes.empty()) {
-		return -1;
+		return infd;
+	}
+	if (requested_pipes.size() == 1 && infd == -1) {
+		return requested_pipes.back().outfd;
 	}
 
 	int fd[2];
@@ -192,12 +195,18 @@ int ProcessManager::process_requested_pipe(ProcessList &pl) {
 
 	if (process.pid == -1) {
 		DBG("fork: failed: " << ::strerror(errno));
-		return -1;
+		return infd;
 	}
 
 	if (process.pid > 0) { // parent
-		Util::setpgid(process.pid, process.pid);
+		Util::setpgid(process.pid, pl.front().pid);
 		::close(process.fd[PipeOut]);
+		for (auto &request_pipe : requested_pipes) {
+			::close(request_pipe.outfd);
+		}
+		if (infd != -1) {
+			::close(infd);
+		}
 		return fd[PipeIn];
 	}
 
@@ -212,15 +221,19 @@ int ProcessManager::process_requested_pipe(ProcessList &pl) {
 
 	::dup2(process.fd[PipeOut], PipeOut);
 	::close(process.fd[PipeOut]);
+	::close(PipeIn);
 	::close(fd[PipeIn]);
 
 	std::list<int> fds;
 	std::transform(requested_pipes.begin(), requested_pipes.end(), std::back_inserter(fds), [](RequestPipe &req) -> int {
 		return req.outfd;
 	});
+	if (infd != -1) {
+		fds.push_back(infd);
+	}
 
 	Util::multiplexer(fds);
 
 	::exit(0);
-	return -1;
+	return infd;
 }
