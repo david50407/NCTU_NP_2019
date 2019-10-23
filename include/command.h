@@ -18,14 +18,13 @@ namespace Npshell {
 			int pipe_to_n;
 
 		public:
+			Command();
+			Command(const std::initializer_list<std::string>);
 			~Command();
 			std::vector<std::string> get_args() const { return args; }
 			std::string get_redirect_out() { return redirect_out; }
+			int pipe_to() const { return pipe_to_n; }
 			static std::list<Chain> parse_commands(const std::string &);
-
-		private:
-			Command();
-			Command(const std::initializer_list<std::string>);
 	};
 }; // namespace Npshell
 

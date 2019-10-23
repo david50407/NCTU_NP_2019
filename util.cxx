@@ -1,10 +1,12 @@
 #include <cstring>
 #include <algorithm>
 #include <iostream>
+#include <string>
 #include <unistd.h>
 #include <errno.h>
 #include <sys/wait.h>
 
+#include <ext/ifdstream>
 #include <util.h>
 
 using Npshell::Util;
@@ -33,4 +35,16 @@ bool Util::setpgid(pid_t pid, pid_t pgid) {
 
 bool Util::pipe(int fd[2]) {
 	return ::pipe(fd) == 0;
+}
+
+void Util::multiplexer(std::list<int> fds) {
+	char buffer[1024];
+
+	for (auto fd : fds) {
+		ext::ifdstream fdin(fd);
+		
+		while (fdin.read(buffer, sizeof(buffer))) {
+			std::cout << buffer;
+		}
+	}
 }

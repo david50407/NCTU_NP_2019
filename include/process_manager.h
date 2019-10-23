@@ -16,20 +16,30 @@ namespace Npshell {
 		pid_t pid;
 	};
 
+	struct RequestPipe {
+		pid_t pgid;
+		int request_number;
+		int outfd;
+	};
+
 	using ProcessList = std::list<Process>;
+	using RequestPipeList = std::list<RequestPipe>;
 	class ProcessManager {
 		public:
 			ProcessManager();
 			~ProcessManager();
 			void execute_commands(const Command::Chain &);
 			void killall();
+			void decount_requested_pipe();
 
 		private:
 			void wait_proc(const pid_t);
 			void waitchld(bool = false);
+			int process_requested_pipe(ProcessList &);
 
 		private:
 			std::map<pid_t, ProcessList> __process_groups;
+			RequestPipeList __request_pipes;
 			static pid_t fg_pgid;
 	};
 }; // namespace Npshell

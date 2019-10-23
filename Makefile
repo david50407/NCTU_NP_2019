@@ -1,7 +1,7 @@
 CC:= gcc
 CCFLAGS:= -I./include
 CXX:= g++
-CXXFLAGS:= -I./include --std=c++14 -fPIC -fpermissive
+CXXFLAGS:= -I./include --std=c++17 -fPIC -fpermissive
 LD:= g++
 LDFLAGS:= $(CXXFLAGS)
 OBJS:= main.o shell.o command.o util.o process_manager.o signal_handler.o

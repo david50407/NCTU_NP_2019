@@ -8,7 +8,7 @@
 
 using Npshell::Command;
 
-Command::Command() : Command({}) {}
+Command::Command() : Command{std::initializer_list<std::string>{}} {}
 Command::Command(const std::initializer_list<std::string> args) :
 	args(args), redirect_out(""), pipe_to_n(-1) {}
 

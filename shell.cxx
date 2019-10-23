@@ -39,6 +39,7 @@ void Shell::run() {
 		}
 		
 		for (auto &cmds : cmd_chains) {
+			pm.decount_requested_pipe();
 			if (!builtin_command(cmds)) {
 				pm.execute_commands(cmds);
 			}
