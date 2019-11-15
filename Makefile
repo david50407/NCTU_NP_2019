@@ -4,6 +4,7 @@ CXX:= g++
 CXXFLAGS:= -I./include --std=c++17 -fPIC -fpermissive
 LD:= g++
 LDFLAGS:= $(CXXFLAGS)
+SRC_PATH:= src/
 OBJS:= main.o shell.o command.o util.o process_manager.o signal_handler.o
 EXEC:= npshell
 
@@ -21,7 +22,7 @@ run: $(EXEC)
 clean:
 	-rm $(OBJS) $(EXEC)
 
-%.o: %.cxx
+%.o: $(SRC_PATH)%.cxx
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(EXEC): $(OBJS)
