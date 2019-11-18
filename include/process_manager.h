@@ -3,6 +3,8 @@
 
 #include <map>
 #include <list>
+#include <functional>
+#include <optional>
 
 #include <command.h>
 
@@ -20,7 +22,7 @@ namespace Npshell {
 	struct RequestPipe {
 		pid_t pgid;
 		int request_number;
-		int outfd;
+		int fd[2];
 	};
 
 	using ProcessList = std::list<Process>;
@@ -37,7 +39,8 @@ namespace Npshell {
 		private:
 			void wait_proc(const pid_t);
 			void waitchld(bool = false);
-			int process_requested_pipe(ProcessList &, int);
+			std::optional<std::reference_wrapper<RequestPipe>> find_requested_pipe(int);
+			int process_requested_pipe(int);
 
 		private:
 			std::map<pid_t, ProcessList> __process_groups;
