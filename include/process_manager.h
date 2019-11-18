@@ -25,9 +25,10 @@ namespace Npshell {
 
 	using ProcessList = std::list<Process>;
 	using RequestPipeList = std::list<RequestPipe>;
+	class Shell;
 	class ProcessManager {
 		public:
-			ProcessManager();
+			ProcessManager(Shell *);
 			~ProcessManager();
 			void execute_commands(const Command::Chain &);
 			void killall();
@@ -41,6 +42,7 @@ namespace Npshell {
 		private:
 			std::map<pid_t, ProcessList> __process_groups;
 			RequestPipeList __request_pipes;
+			Shell &__shell;
 			static pid_t fg_pgid;
 	};
 }; // namespace Npshell

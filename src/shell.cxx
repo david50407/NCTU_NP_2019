@@ -18,10 +18,12 @@ using Npshell::Command;
 using Npshell::SignalHandler;
 using Npshell::shell_exited;
 
-Shell::Shell() : Shell(std::cin, std::cout) {}
-
+Shell::Shell() : Shell(std::cin, std::cout, std::cerr) {}
 Shell::Shell(std::istream& input, std::ostream& output)
-	: pm(), _input(input), _output(output) {
+	: Shell(input, output, output) {}
+
+Shell::Shell(std::istream& input, std::ostream& output, std::ostream& error)
+	: pm(this), _input(input), _output(output), _error(error) {
 
 	if (&input == &std::cin) {
 		auto quit_handler = [=] (const int signal) {

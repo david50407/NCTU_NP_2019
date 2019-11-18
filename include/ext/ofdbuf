@@ -13,6 +13,7 @@ namespace ext {
 			ofdbuf(int fd) : __fd(fd) {
 				setp(__buffer, __buffer + BUFFER_SIZE);
 			}
+			const int getFd() { return __fd; }
 
 		protected:
 			virtual int_type overflow(int_type c) {

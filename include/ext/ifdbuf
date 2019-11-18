@@ -13,6 +13,7 @@ namespace ext {
 			ifdbuf(int fd) : __fd(fd) {
 				setg(__buffer + PUTBACK_SIZE, __buffer + PUTBACK_SIZE, __buffer + PUTBACK_SIZE);
 			}
+			const int getFd() { return __fd; }
 
 		protected:
 			virtual int_type underflow() {

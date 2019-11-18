@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include <signal_handler.hxx>
+#include <shell.h>
 #include <process_manager.h>
 #include <util.h>
 #include <logger.hxx>
@@ -15,11 +16,12 @@ using Npshell::Process;
 using Npshell::ProcessList;
 using Npshell::ProcessManager;
 using Npshell::RequestPipe;
+using Npshell::Shell;
 
 pid_t ProcessManager::fg_pgid = -1;
 
-ProcessManager::ProcessManager() :
-	__process_groups(), __request_pipes() {
+ProcessManager::ProcessManager(Shell *shell) :
+	__process_groups(), __request_pipes(), __shell(*shell) {
 	SignalHandler::subscribe(SIGCHLD, [=] (const int signal) {
 		::waitpid(-1, nullptr, 0);
 	});
@@ -82,13 +84,21 @@ void ProcessManager::execute_commands(const Command::Chain &chain) {
 		if (process.fd[PipeIn] != -1) {
 			::dup2(process.fd[PipeIn], PipeIn);
 			::close(process.fd[PipeIn]);
+		} else if (int fd = __shell.getInputFd(); fd != PipeIn) {
+			::dup2(fd, PipeIn);
 		}
+
 		if (process.fd[PipeOut] != -1) {
 			::dup2(process.fd[PipeOut], PipeOut);
 			if (process.cmd.redirect_stderr()) {
 				::dup2(process.fd[PipeOut], PipeErr);
+			} else if (int fd = __shell.getErrorFd(); fd != PipeErr) {
+				::dup2(fd, PipeErr);
 			}
 			::close(process.fd[PipeOut]);
+		} else if (int fd = __shell.getOutputFd(); fd != PipeOut) {
+			::dup2(fd, PipeOut);
+			::dup2(fd, PipeErr);
 		}
 
 		Util::execvp(process.cmd.get_args()[0], process.cmd.get_args());

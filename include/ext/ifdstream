@@ -11,6 +11,7 @@ namespace ext {
 			ifdstream(int fd) : std::istream(0), __buffer(fd) {
 				rdbuf(&__buffer);
 			}
+			const int getFd() { return __buffer.getFd(); }
 		private:
 			ifdbuf __buffer;
 	};
