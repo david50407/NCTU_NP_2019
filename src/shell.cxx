@@ -11,21 +11,29 @@
 #include <command.h>
 #include <signal_handler.hxx>
 #include <logger.hxx>
+#include <shell_exited.hxx>
 
 using Npshell::Shell;
 using Npshell::Command;
 using Npshell::SignalHandler;
+using Npshell::shell_exited;
 
-Shell::Shell() : pm() {
-	auto quit_handler = [=] (const int signal) {
-		std::cin.clear();
-		std::cout << std::endl;
-		show_prompt();
-		std::cout.flush();
-	};
+Shell::Shell() : Shell(std::cin, std::cout) {}
 
-	SignalHandler::subscribe(SIGINT, quit_handler);
-	SignalHandler::subscribe(SIGQUIT, quit_handler);
+Shell::Shell(std::istream& input, std::ostream& output)
+	: pm(), _input(input), _output(output) {
+
+	if (&input == &std::cin) {
+		auto quit_handler = [=] (const int signal) {
+			std::cin.clear();
+			std::cout << std::endl;
+			show_prompt();
+			std::cout.flush();
+		};
+
+		SignalHandler::subscribe(SIGINT, quit_handler);
+		SignalHandler::subscribe(SIGQUIT, quit_handler);
+	}
 }
 
 void Shell::run() {
@@ -53,13 +61,13 @@ void Shell::initialize_env() {
 }
 
 void Shell::show_prompt() {
-	std::cout << "% ";
+	_output << "% " << std::flush;
 }
 
 std::string Shell::read_command() {
 	std::string cmd = "";
-	std::getline(std::cin, cmd);
-	if (std::cin.eof()) {
+	std::getline(_input, cmd);
+	if (_input.eof()) {
 		return "exit";
 	}
 
@@ -87,7 +95,7 @@ bool Shell::builtin_command_$__error(const Command::Chain &chain) {
 bool Shell::builtin_command_exit(const Command::Chain &chain) {
 	if (chain.front().get_args()[0] == "exit") {
 		pm.killall();
-		::exit(0);
+		throw shell_exited();
 	}
 
 	return false;
@@ -123,7 +131,7 @@ bool Shell::builtin_command_printenv(const Command::Chain &chain) {
 	auto name = std::string(args[1]);
 	char *env;
 	if ((env = ::getenv(name.c_str())) != NULL) {
-		std::cout << env << std::endl;
+		_output << env << std::endl;
 	}
 
 	return true;

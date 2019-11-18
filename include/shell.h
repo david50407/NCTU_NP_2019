@@ -2,6 +2,7 @@
 #define __SHELL_H__
 
 #include <string>
+#include <iostream>
 
 #include <process_manager.h>
 
@@ -12,7 +13,12 @@ namespace Npshell {
 
 		public:
 			Shell();
+			Shell(std::istream&, std::ostream&);
 			void run();
+
+		private:
+			std::istream& _input;
+			std::ostream& _output;
 
 		private:
 			void initialize_env();

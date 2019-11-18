@@ -1,0 +1,49 @@
+#if !defined(__EXT_OFDBUF__)
+#define __EXT_OFDBUF__
+
+#include <unistd.h>
+#include <cstring>
+#include <cstdio>
+#include <streambuf>
+
+namespace ext {
+	class ofdbuf : public std::streambuf
+	{
+		public:
+			ofdbuf(int fd) : __fd(fd) {
+				setp(__buffer, __buffer + BUFFER_SIZE);
+			}
+
+		protected:
+			virtual int_type overflow(int_type c) {
+				if (sync() == -1) {
+					return traits_type::eof();
+				}
+
+				if (!traits_type::eq_int_type(c, traits_type::eof())) {
+					*pptr() = traits_type::to_char_type(c);
+					pbump(1);
+					return c;
+				}
+
+				return traits_type::not_eof(c);
+			}
+
+			virtual int sync() {
+				std::streamsize size = pptr() - pbase();
+				if (size > 0 && ::write(__fd, __buffer, size) != size) {
+					return -1;
+				}
+
+				setp(__buffer, __buffer + BUFFER_SIZE);
+				return 0;
+			}
+
+		private:
+			static const std::streamsize BUFFER_SIZE = 1024;
+			int __fd;
+			char __buffer[BUFFER_SIZE];
+	};
+}; // namespace ext
+
+#endif // !defined(__EXT_OFDBUF__)

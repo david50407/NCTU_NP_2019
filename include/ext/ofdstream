@@ -1,0 +1,19 @@
+#if !defined(__EXT_OFDSTREAM__)
+#define __EXT_OFDSTREAM__
+
+#include <ostream>
+
+#include <ext/ofdbuf>
+
+namespace ext {
+	class ofdstream : public std::ostream {
+		public:
+			ofdstream(int fd) : std::ostream(0), __buffer(fd) {
+				rdbuf(&__buffer);
+			}
+		private:
+			ofdbuf __buffer;
+	};
+}; // namespace ext
+
+#endif // !defined(__EXT_OFDSTREAM__)
