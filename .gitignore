@@ -5,5 +5,5 @@
 work_dir/
 
 # Output
-*.o
+build/
 /npshell

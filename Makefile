@@ -5,7 +5,8 @@ CXXFLAGS:= -I./include --std=c++17 -fPIC -fpermissive
 LD:= g++
 LDFLAGS:= $(CXXFLAGS)
 SRC_PATH:= src/
-OBJS:= main.o shell.o command.o util.o process_manager.o signal_handler.o
+BUILD_PATH:= build/
+OBJS:= $(addprefix $(BUILD_PATH), main.o shell.o command.o util.o process_manager.o signal_handler.o)
 EXEC:= npshell
 
 .PHONY: all run clean debug
@@ -22,7 +23,7 @@ run: $(EXEC)
 clean:
 	-rm $(OBJS) $(EXEC)
 
-%.o: $(SRC_PATH)%.cxx
+$(BUILD_PATH)%.o: $(SRC_PATH)%.cxx
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(EXEC): $(OBJS)
