@@ -6,25 +6,22 @@ LD:= g++
 LDFLAGS:= $(CXXFLAGS)
 SRC_PATH:= src/
 BUILD_PATH:= build/
-OBJS:= $(addprefix $(BUILD_PATH), main.o shell.o command.o util.o process_manager.o signal_handler.o)
-EXEC:= npshell
+SHARED_OBJS:= $(addprefix $(BUILD_PATH), shell.o command.o util.o process_manager.o signal_handler.o)
+EXECS:= npshell
 
 .PHONY: all run clean debug
 
-all: $(EXEC)
+all: $(EXECS)
 
 debug: CXXFLAGS += -DDEBUG -g
 debug: CCFLAGS += -DDEBUG -g
-debug: $(EXEC)
-
-run: $(EXEC)
-	-./$(EXEC)
+debug: $(EXECS)
 
 clean:
-	-rm $(OBJS) $(EXEC)
+	-rm $(SHARED_OBJS) $(addprefix $(BUILD_PATH)entry_, $(addsuffix .o, $(EXECS))) $(EXECS)
 
 $(BUILD_PATH)%.o: $(SRC_PATH)%.cxx
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-$(EXEC): $(OBJS)
-	$(LD) $(LDFLAGS) -o $(EXEC) $(OBJS)
+$(EXECS): %: $(BUILD_PATH)entry_%.o $(SHARED_OBJS)
+	$(LD) $(LDFLAGS) -o $@ $< $(SHARED_OBJS)
