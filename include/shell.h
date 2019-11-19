@@ -8,11 +8,13 @@
 #include <ext/ifdstream>
 #include <ext/ofdstream>
 #include <process_manager.h>
+#include <environment.hxx>
 
 namespace Npshell {
 	class Shell {
 		public:
 			ProcessManager pm;
+			Environment envs;
 
 		public:
 			Shell();
@@ -44,7 +46,6 @@ namespace Npshell {
 			std::ostream& _error;
 
 		private:
-			void initialize_env();
 			void show_prompt();
 			std::string read_command();
 			bool builtin_command(const Command::Chain &);

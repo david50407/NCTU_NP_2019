@@ -23,7 +23,8 @@ Shell::Shell(std::istream& input, std::ostream& output)
 	: Shell(input, output, output) {}
 
 Shell::Shell(std::istream& input, std::ostream& output, std::ostream& error)
-	: pm(this), _input(input), _output(output), _error(error) {
+	: pm(this), envs({{ "PATH", "bin:." }})
+	, _input(input), _output(output), _error(error) {
 
 	if (&input == &std::cin) {
 		auto quit_handler = [=] (const int signal) {
@@ -39,8 +40,6 @@ Shell::Shell(std::istream& input, std::ostream& output, std::ostream& error)
 }
 
 void Shell::run() {
-	initialize_env();
-
 	while (true) {
 		show_prompt();
 		const auto cmd_chains = Command::parse_commands(read_command());
@@ -56,10 +55,6 @@ void Shell::run() {
 			}
 		}
 	}
-}
-
-void Shell::initialize_env() {
-	::setenv("PATH", "bin:.", 1);
 }
 
 void Shell::show_prompt() {
@@ -115,7 +110,7 @@ bool Shell::builtin_command_setenv(const Command::Chain &chain) {
 
 	auto name = std::string(args[1]);
 	auto value = std::string(args[2]);
-	::setenv(name.c_str(), value.c_str(), 1);
+	envs.set(name, value);
 
 	return true;
 }
@@ -131,9 +126,8 @@ bool Shell::builtin_command_printenv(const Command::Chain &chain) {
 	}
 
 	auto name = std::string(args[1]);
-	char *env;
-	if ((env = ::getenv(name.c_str())) != NULL) {
-		_output << env << std::endl;
+	if (auto env = envs.get(name); env) {
+		_output << *env << std::endl;
 	}
 
 	return true;

@@ -5,10 +5,12 @@
 #include <vector>
 #include <string>
 
+#include <environment.hxx>
+
 namespace Npshell {
 	class Util {
 		public:
-			static int execvp(const std::string, const std::vector<std::string>);
+			static int execvpe(const std::string, const std::vector<std::string>, const Environment &);
 			static bool setpgid(pid_t, pid_t);
 			static bool pipe(int [2]);
 			static void multiplexer(std::list<int>);

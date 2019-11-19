@@ -107,7 +107,7 @@ void ProcessManager::execute_commands(const Command::Chain &chain) {
 			::dup2(fd, PipeErr);
 		}
 
-		Util::execvp(process.cmd.get_args()[0], process.cmd.get_args());
+		Util::execvpe(process.cmd.get_args()[0], process.cmd.get_args(), __shell.envs);
 	}
 
 wait_to_kill: ;
