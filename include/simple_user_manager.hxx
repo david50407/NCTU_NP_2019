@@ -44,7 +44,10 @@ namespace Npshell {
 				auto it = __users.begin() + idx;
 				if (!it->has_value()) { return false; }
 
+				auto username = (*it)->name;
 				*it = std::nullopt;
+
+				goodbye(username);
 				return true;
 			}
 			const std::list<std::pair<int, const std::reference_wrapper<const UserInfo>>> list() const override {
@@ -75,7 +78,7 @@ namespace Npshell {
 		private:
 			void greeting(int idx) {
 				if (auto user = get(idx); user) {
-					user->shell->output() << GREETING_MESSAGE << std::flush;
+					tell(GREETING_MESSAGE, {idx});
 
 					std::stringstream ss;
 					ss << "*** User '" << user->name << "' entered from "
@@ -83,6 +86,13 @@ namespace Npshell {
 
 					broadcast(ss.str());
 				}
+			}
+
+			inline void goodbye(std::string username) {
+				std::stringstream ss;
+				ss << "*** User '" << username << "' left. ***" << std::endl;
+
+				broadcast(ss.str());
 			}
 	}; // class SimpleUserManager
 }; // namespace Npshell
