@@ -25,19 +25,19 @@ Shell::Shell()
 	register_signal();
 }
 
-Shell::Shell(int inputFd, int outputFd)
+Shell::Shell(std::shared_ptr<std::istream> input_ptr, std::shared_ptr<std::ostream> output_ptr)
 	: pm(this), envs({{ "PATH", "bin:." }})
-	, input_stream_(new ext::ifdstream(inputFd))
-	, output_stream_(new ext::ofdstream(outputFd))
+	, input_stream_(std::forward<decltype(input_ptr)>(input_ptr))
+	, output_stream_(std::forward<decltype(output_ptr)>(output_ptr))
 	, error_stream_(nullptr) {
 	error_stream_ = output_stream_;
 }
 
-Shell::Shell(int inputFd, int outputFd, int errorFd)
+Shell::Shell(std::shared_ptr<std::istream> input_ptr, std::shared_ptr<std::ostream> output_ptr, std::shared_ptr<std::ostream> error_ptr)
 	: pm(this), envs({{ "PATH", "bin:." }})
-	, input_stream_(new ext::ifdstream(inputFd))
-	, output_stream_(new ext::ofdstream(outputFd))
-	, error_stream_(new ext::ofdstream(errorFd))
+	, input_stream_(std::forward<decltype(input_ptr)>(input_ptr))
+	, output_stream_(std::forward<decltype(output_ptr)>(output_ptr))
+	, error_stream_(std::forward<decltype(error_ptr)>(error_ptr))
 	{}
 
 void Shell::register_signal() {
@@ -54,10 +54,15 @@ void Shell::register_signal() {
 
 void Shell::run() {
 	while (true) {
-		show_prompt();
+		yield();
+	}
+}
+
+void Shell::yield() {
+	if (welcome_) {
 		const auto cmd_chains = Command::parse_commands(read_command());
 		if (cmd_chains.size() == 0) {
-			continue;
+			return;
 		}
 		
 		for (auto &cmds : cmd_chains) {
@@ -68,6 +73,9 @@ void Shell::run() {
 			}
 		}
 	}
+
+	welcome_ = true;
+	show_prompt();
 }
 
 void Shell::show_prompt() {

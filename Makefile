@@ -7,7 +7,7 @@ LDFLAGS:= $(CXXFLAGS)
 SRC_PATH:= src/
 BUILD_PATH:= build/
 SHARED_OBJS:= $(addprefix $(BUILD_PATH), shell.o command.o util.o process_manager.o signal_handler.o socket_server.o)
-EXECS:= npshell np_simple
+EXECS:= npshell np_simple np_simple_proc
 
 .PHONY: all run clean debug
 
@@ -18,7 +18,7 @@ debug: CCFLAGS += -DDEBUG -g
 debug: $(EXECS)
 
 clean:
-	-rm $(SHARED_OBJS) $(addprefix $(BUILD_PATH)entry_, $(addsuffix .o, $(EXECS))) $(EXECS)
+	-rm $(SHARED_OBJS) $(addprefix $(BUILD_PATH)entry_, $(addsuffix .o, $(EXECS))) $(EXECS) 2>/dev/null
 
 $(BUILD_PATH)%.o: $(SRC_PATH)%.cxx
 	$(CXX) $(CXXFLAGS) -c -o $@ $<

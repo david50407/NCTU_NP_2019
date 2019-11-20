@@ -26,7 +26,10 @@ int main(int argc, char **argv, char **envp) {
 	});
 
 	SocketServer server(port, [] (int fd) {
-		Shell sh(fd, fd);
+		Shell sh(
+			std::make_shared<ext::ifdstream>(fd),
+			std::make_shared<ext::ofdstream>(fd)
+		);
 
 		try {
 			sh.run();

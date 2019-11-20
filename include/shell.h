@@ -22,9 +22,10 @@ namespace Npshell {
 
 		public:
 			Shell();
-			Shell(int, int);
-			Shell(int, int, int);
+			Shell(std::shared_ptr<std::istream>, std::shared_ptr<std::ostream>);
+			Shell(std::shared_ptr<std::istream>, std::shared_ptr<std::ostream>, std::shared_ptr<std::ostream>);
 			void run();
+			void yield();
 			const int getInputFd() {
 				if (auto &stream = input(); typeid(stream) == typeid(ext::ifdstream)) {
 					return dynamic_cast<const ext::ifdstream &>(stream).getFd();
@@ -51,6 +52,7 @@ namespace Npshell {
 			std::shared_ptr<std::istream> input_stream_;
 			std::shared_ptr<std::ostream> output_stream_;
 			std::shared_ptr<std::ostream> error_stream_;
+			bool welcome_ = false;
 
 		private:
 			void register_signal();
