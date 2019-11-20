@@ -5,13 +5,14 @@
 #include <optional>
 #include <functional>
 #include <utility>
+#include <sstream>
+#include <type_traits>
 
 #include <logger.hxx>
 #include <user_manager.h>
 
 namespace Npshell {
 	class SimpleUserManager : public UserManager {
-
 		public:
 			SimpleUserManager() : __users(MAX_USERS, std::nullopt) {}
 			
@@ -26,8 +27,10 @@ namespace Npshell {
 				}
 
 				*it = std::make_optional(info);
+				auto idx = it - __users.begin();
+				greeting(idx);
 
-				return it - __users.begin();
+				return idx;
 			}
 			OptionalUserInfo get(int idx) override {
 				return idx >= MAX_USERS
@@ -44,9 +47,43 @@ namespace Npshell {
 				*it = std::nullopt;
 				return true;
 			}
+			const std::list<std::pair<int, const std::reference_wrapper<const UserInfo>>> list() const override {
+				typename std::remove_const<decltype(list())>::type list;
+
+				for (auto it = ++(__users.begin()); it != __users.end(); ++it) {
+					if (*it) {
+						list.emplace_back(
+							std::make_pair<int, std::reference_wrapper<const UserInfo>>(
+								it - __users.begin(),
+								std::cref(**it)
+							)
+						);
+					}
+				}
+
+				return list;
+			}
 
 		private:
+			inline static const std::string GREETING_MESSAGE = {
+				"****************************************\n"
+				"** Welcome to the information server. **\n"
+				"****************************************\n"
+			};
 			std::vector<OptionalUserInfo> __users;
+
+		private:
+			void greeting(int idx) {
+				if (auto user = get(idx); user) {
+					user->shell->output() << GREETING_MESSAGE << std::flush;
+
+					std::stringstream ss;
+					ss << "*** User '" << user->name << "' entered from "
+						<< user->address << ":" << user->port << ". ***" << std::endl;
+
+					broadcast(ss.str());
+				}
+			}
 	}; // class SimpleUserManager
 }; // namespace Npshell
 

@@ -12,8 +12,22 @@
 #include <set>
 
 namespace Npshell {
+  struct ClientInfo {
+    std::string address;
+    unsigned short port;
+
+    public:
+      ClientInfo(struct sockaddr_in addr)
+        : address(), port(::ntohs(addr.sin_port)) {
+        char c_str[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &(addr.sin_addr), c_str, INET_ADDRSTRLEN);
+
+        address.assign(c_str);
+      }
+  }; // struct ClientInfo
+
   class SocketServer {
-    using Handler = std::function<bool (int)>;
+    using Handler = std::function<bool (int, std::optional<ClientInfo>)>;
 
     public:
       SocketServer(short, Handler);
@@ -30,7 +44,7 @@ namespace Npshell {
       bool _nonblocking = false;
       std::set<int> _clientFds;
     private:
-      void handle_connection(int);
+      void handle_connection(int, std::optional<ClientInfo>);
       std::optional<std::pair<int, struct sockaddr_in>> accept_connection();
       std::list<int> get_select_fds();
   }; // class SocketServer

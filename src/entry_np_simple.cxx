@@ -12,12 +12,13 @@ using Npshell::SocketServer;
 using Npshell::Shell;
 using Npshell::SignalHandler;
 using Npshell::shell_exited;
+using Npshell::ClientInfo;
 
 int main(int argc, char **argv, char **envp) {
-	short port = 5566;
+	unsigned short port = 5566;
 
 	if (argc > 1) {
-		port = (short)::atoi(argv[1]);
+		port = (unsigned short)::atoi(argv[1]);
 	}
 
 	SignalHandler::init();
@@ -25,7 +26,7 @@ int main(int argc, char **argv, char **envp) {
 		::exit(0);
 	});
 
-	SocketServer server(port, [] (int fd) {
+	SocketServer server(port, [] (int fd, std::optional<ClientInfo> client_info) {
 		Shell sh(
 			std::make_shared<ext::ifdstream>(fd),
 			std::make_shared<ext::ofdstream>(fd)

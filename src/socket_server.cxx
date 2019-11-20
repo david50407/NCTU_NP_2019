@@ -8,6 +8,7 @@
 #include <socket_server.h>
 
 using Npshell::SocketServer;
+using Npshell::ClientInfo;
 
 SocketServer::SocketServer(short port, SocketServer::Handler handler)
 	: _port(port), _handler(handler), _clientFds() {}
@@ -42,14 +43,14 @@ bool SocketServer::start() {
 	while (true) {
 		for (auto fd : get_select_fds()) {
 			if (fd == _socketFd) { // New client
-				auto clientInfo = accept_connection();
-				if (!clientInfo) { continue; }
+				auto connection = accept_connection();
+				if (!connection) { continue; }
 
-				auto [clientFd, clientAddr] = *clientInfo;
-				_clientFds.insert(clientFd);
-				handle_connection(clientFd);
+				auto [client_fd, client_addr] = *connection;
+				_clientFds.insert(client_fd);
+				handle_connection(client_fd, std::make_optional<ClientInfo>(client_addr));
 			} else {
-				handle_connection(fd);
+				handle_connection(fd, std::nullopt);
 			}
 		}
 	}
@@ -64,8 +65,8 @@ void SocketServer::close() {
 	}
 }
 
-void SocketServer::handle_connection(int fd) {
-	if (_handler(fd)) {
+void SocketServer::handle_connection(int fd, std::optional<ClientInfo> client_info) {
+	if (_handler(fd, client_info)) {
 		::close(fd);
 		_clientFds.erase(fd);
 	}

@@ -16,12 +16,13 @@ using Npshell::SignalHandler;
 using Npshell::shell_exited;
 using Npshell::SimpleUserManager;
 using Npshell::UserInfo;
+using Npshell::ClientInfo;
 
 int main(int argc, char **argv, char **envp) {
-	short port = 5566;
+	unsigned short port = 5566;
 
 	if (argc > 1) {
-		port = (short)::atoi(argv[1]);
+		port = (unsigned short)::atoi(argv[1]);
 	}
 
 	SignalHandler::init();
@@ -32,12 +33,16 @@ int main(int argc, char **argv, char **envp) {
 	SimpleUserManager um;
 	std::unordered_map<int, int> fd_userid_mapping;
 
-	SocketServer server(port, [&um, &fd_userid_mapping] (int fd) {
+	SocketServer server(port, [&um, &fd_userid_mapping] (int fd, std::optional<ClientInfo> client_info) {
 		if (auto it = fd_userid_mapping.find(fd); it == fd_userid_mapping.end()) {
-			UserInfo info { "", 0, std::make_shared<Shell>(
-				std::make_shared<ext::ifdstream>(fd),
-				std::make_shared<ext::ofdstream>(fd)
-			) };
+			UserInfo info {
+				client_info->address,
+				client_info->port,
+				std::make_shared<Shell>(
+					std::make_shared<ext::ifdstream>(fd),
+					std::make_shared<ext::ofdstream>(fd)
+				)
+			};
 			fd_userid_mapping[fd] = um.insert(info);
 		}
 

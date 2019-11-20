@@ -47,6 +47,15 @@ namespace Npshell {
 				
 				return STDERR_FILENO;
 			}
+			std::istream &input() {
+				return input_stream_ ? *input_stream_ : std::cin;
+			}
+			std::ostream &output() {
+				return output_stream_ ? *output_stream_ : std::cout;
+			}
+			std::ostream &error() {
+				return error_stream_ ? *error_stream_ : (output_stream_ ? *output_stream_ : std::cerr);
+			}
 
 		private:
 			std::shared_ptr<std::istream> input_stream_;
@@ -63,15 +72,6 @@ namespace Npshell {
 			bool builtin_command_exit(const Command::Chain &);
 			bool builtin_command_setenv(const Command::Chain &);
 			bool builtin_command_printenv(const Command::Chain &);
-			std::istream &input() {
-				return input_stream_ ? *input_stream_ : std::cin;
-			}
-			std::ostream &output() {
-				return output_stream_ ? *output_stream_ : std::cout;
-			}
-			std::ostream &error() {
-				return error_stream_ ? *error_stream_ : (output_stream_ ? *output_stream_ : std::cerr);
-			}
 	};
 }; // namespace Npshell
 
