@@ -25,16 +25,14 @@ int main(int argc, char **argv, char **envp) {
 		::exit(0);
 	});
 
-	SocketServer server(port, [=] (int fd) {
-		ext::ifdstream input(fd);
-		ext::ofdstream output(fd);
-		Shell sh(input, output);
+	SocketServer server(port, [] (int fd) {
+		Shell sh(fd, fd);
 
 		try {
 			sh.run();
 		} catch (shell_exited &_e) {}
 
-		::close(fd);
+		return true;
 	});
 
 	server.start();

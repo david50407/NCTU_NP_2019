@@ -11,7 +11,7 @@ namespace ext {
 			ofdstream(int fd) : std::ostream(0), __buffer(fd) {
 				rdbuf(&__buffer);
 			}
-			const int getFd() { return __buffer.getFd(); }
+			const int getFd() const { return __buffer.getFd(); }
 		private:
 			ofdbuf __buffer;
 	};

@@ -6,6 +6,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <utility>
 
 #include <shell.h>
 #include <command.h>
@@ -18,25 +19,37 @@ using Npshell::Command;
 using Npshell::SignalHandler;
 using Npshell::shell_exited;
 
-Shell::Shell() : Shell(std::cin, std::cout, std::cerr) {}
-Shell::Shell(std::istream& input, std::ostream& output)
-	: Shell(input, output, output) {}
-
-Shell::Shell(std::istream& input, std::ostream& output, std::ostream& error)
+Shell::Shell()
 	: pm(this), envs({{ "PATH", "bin:." }})
-	, _input(input), _output(output), _error(error) {
+	, input_stream_(nullptr), output_stream_(nullptr), error_stream_(nullptr) {
+	register_signal();
+}
 
-	if (&input == &std::cin) {
-		auto quit_handler = [=] (const int signal) {
-			std::cin.clear();
-			std::cout << std::endl;
-			show_prompt();
-			std::cout.flush();
-		};
+Shell::Shell(int inputFd, int outputFd)
+	: pm(this), envs({{ "PATH", "bin:." }})
+	, input_stream_(new ext::ifdstream(inputFd))
+	, output_stream_(new ext::ofdstream(outputFd))
+	, error_stream_(nullptr) {
+	error_stream_ = output_stream_;
+}
 
-		SignalHandler::subscribe(SIGINT, quit_handler);
-		SignalHandler::subscribe(SIGQUIT, quit_handler);
-	}
+Shell::Shell(int inputFd, int outputFd, int errorFd)
+	: pm(this), envs({{ "PATH", "bin:." }})
+	, input_stream_(new ext::ifdstream(inputFd))
+	, output_stream_(new ext::ofdstream(outputFd))
+	, error_stream_(new ext::ofdstream(errorFd))
+	{}
+
+void Shell::register_signal() {
+	auto quit_handler = [=] (const int signal) {
+		std::cin.clear();
+		std::cout << std::endl;
+		show_prompt();
+		std::cout.flush();
+	};
+
+	SignalHandler::subscribe(SIGINT, quit_handler);
+	SignalHandler::subscribe(SIGQUIT, quit_handler);
 }
 
 void Shell::run() {
@@ -58,13 +71,13 @@ void Shell::run() {
 }
 
 void Shell::show_prompt() {
-	_output << "% " << std::flush;
+	output() << "% " << std::flush;
 }
 
 std::string Shell::read_command() {
 	std::string cmd = "";
-	std::getline(_input, cmd);
-	if (_input.eof()) {
+	std::getline(input(), cmd);
+	if (input().eof()) {
 		return "exit";
 	}
 
@@ -127,7 +140,7 @@ bool Shell::builtin_command_printenv(const Command::Chain &chain) {
 
 	auto name = std::string(args[1]);
 	if (auto env = envs.get(name); env) {
-		_output << *env << std::endl;
+		output() << *env << std::endl;
 	}
 
 	return true;
