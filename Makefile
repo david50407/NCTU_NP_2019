@@ -6,7 +6,7 @@ LD:= g++
 LDFLAGS:= $(CXXFLAGS)
 SRC_PATH:= src/
 BUILD_PATH:= build/
-SHARED_OBJS:= $(addprefix $(BUILD_PATH), shell.o command.o util.o process_manager.o signal_handler.o socket_server.o)
+SHARED_OBJS:= $(addprefix $(BUILD_PATH), shell.o command.o util.o process_manager.o signal_handler.o socket_server.o user_manager.o)
 EXECS:= npshell np_simple np_simple_proc
 
 .PHONY: all run clean debug

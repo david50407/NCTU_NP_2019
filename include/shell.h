@@ -13,6 +13,7 @@
 #include <ext/ofdstream>
 #include <process_manager.h>
 #include <environment.hxx>
+#include <user_manager.h>
 
 namespace Npshell {
 	class Shell {
@@ -56,8 +57,12 @@ namespace Npshell {
 			std::ostream &error() {
 				return error_stream_ ? *error_stream_ : (output_stream_ ? *output_stream_ : std::cerr);
 			}
+			void bind_to_user_manager(UserManager *bind) {
+				binded_user_manager_ = bind;
+			}
 
 		private:
+			UserManager *binded_user_manager_ = nullptr;
 			std::shared_ptr<std::istream> input_stream_;
 			std::shared_ptr<std::ostream> output_stream_;
 			std::shared_ptr<std::ostream> error_stream_;
@@ -72,6 +77,8 @@ namespace Npshell {
 			bool builtin_command_exit(const Command::Chain &);
 			bool builtin_command_setenv(const Command::Chain &);
 			bool builtin_command_printenv(const Command::Chain &);
+			bool builtin_command_yell(const Command::Chain &);
+			bool builtin_command_tell(const Command::Chain &);
 	};
 }; // namespace Npshell
 

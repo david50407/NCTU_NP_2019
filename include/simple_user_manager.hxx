@@ -7,6 +7,7 @@
 #include <utility>
 #include <sstream>
 #include <type_traits>
+#include <algorithm>
 
 #include <logger.hxx>
 #include <user_manager.h>
@@ -27,6 +28,8 @@ namespace Npshell {
 				}
 
 				*it = std::make_optional(info);
+				info.shell->bind_to_user_manager(this);
+
 				auto idx = it - __users.begin();
 				greeting(idx);
 
@@ -37,6 +40,17 @@ namespace Npshell {
 					? std::nullopt
 					: __users[idx]
 				;
+			}
+			OptionalUserInfo get(const Shell *shell_ptr) override {
+				auto it = std::find_if(__users.begin(), __users.end(), [shell_ptr] (auto &info) -> bool {
+					return info
+						? info->shell.get() == shell_ptr
+						: false;
+				});
+
+				return it == __users.end()
+					? std::nullopt
+					: *it;
 			}
 			bool remove(int idx) override {
 				if (idx >= MAX_USERS) { return false; }
