@@ -57,12 +57,12 @@ namespace Npshell {
 			std::ostream &error() {
 				return error_stream_ ? *error_stream_ : (output_stream_ ? *output_stream_ : std::cerr);
 			}
-			void bind_to_user_manager(UserManager *bind) {
-				binded_user_manager_ = bind;
+			void bind_to_user_manager(std::unique_ptr<UserManager::Binder> binder) {
+				binded_user_manager_ = std::move(binder);
 			}
 
 		private:
-			UserManager *binded_user_manager_ = nullptr;
+			std::unique_ptr<UserManager::Binder> binded_user_manager_ = nullptr;
 			std::shared_ptr<std::istream> input_stream_;
 			std::shared_ptr<std::ostream> output_stream_;
 			std::shared_ptr<std::ostream> error_stream_;

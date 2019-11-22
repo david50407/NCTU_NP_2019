@@ -28,9 +28,10 @@ namespace Npshell {
 				}
 
 				*it = std::make_optional(info);
-				info.shell->bind_to_user_manager(this);
 
 				auto idx = it - __users.begin();
+				info.shell->bind_to_user_manager(std::make_unique<Binder>(idx, this));
+
 				greeting(idx);
 
 				return idx;
@@ -110,9 +111,9 @@ namespace Npshell {
 			std::vector<OptionalUserInfo> __users;
 
 		private:
-			void greeting(int idx) {
+			inline void greeting(int idx) {
 				if (auto user = get(idx); user) {
-					tell(GREETING_MESSAGE, {idx});
+					tell(idx, GREETING_MESSAGE);
 
 					std::stringstream ss;
 					ss << "*** User '" << user->name << "' entered from "

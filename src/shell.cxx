@@ -177,7 +177,7 @@ bool Shell::builtin_command_yell(const Command::Chain &chain) {
 		message << " " << *it;
 	}
 
-	binded_user_manager_->broadcast(message.str(), this);
+	binded_user_manager_->broadcast(message.str());
 
 	return true;
 }
@@ -198,7 +198,7 @@ bool Shell::builtin_command_tell(const Command::Chain &chain) {
 		message << " " << *it;
 	}
 
-	if (!binded_user_manager_->tell(message.str(), target_idx, this)) {
+	if (!binded_user_manager_->tell(target_idx, message.str())) {
 		error() 
 			<< "*** Error: user #" << target_idx 
 			<< " does not exist yet. ***" << std::endl;
@@ -217,7 +217,7 @@ bool Shell::builtin_command_rename(const Command::Chain &chain) {
 		return true;
 	}
 
-	binded_user_manager_->rename(this, args[1]);
+	binded_user_manager_->rename(args[1]);
 
 	return true;
 }

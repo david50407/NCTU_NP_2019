@@ -8,27 +8,9 @@ using Npshell::Shell;
 using Npshell::UserManager;
 using Npshell::UserInfo;
 
-bool UserManager::tell(const std::string msg, const int idx) {
+bool UserManager::tell(const int idx, const std::string msg) {
 	if (auto user = get(idx); user) {
 		user->shell->output() << msg << std::flush;
-		return true;
-	}
-
-	return false;
-}
-
-bool UserManager::tell(const std::string msg, const int idx, const Shell* shell_ptr) {
-	auto from_ref = get_ref(shell_ptr);
-	
-	if (from_ref == nullptr) {
-		DBG("Shell not managed");
-		return false;
-	}
-
-	if (auto user = get(idx); user) {
-		user->shell->output()
-			<< "*** " << from_ref->name << " told you ***: "
-			<< msg << std::endl;
 		return true;
 	}
 
@@ -41,27 +23,12 @@ void UserManager::broadcast(const std::string msg) {
 	}
 }
 
-void UserManager::broadcast(const std::string msg, const Shell *shell_ptr) {
-	auto from_ref = get_ref(shell_ptr);
-	
-	if (from_ref == nullptr) {
-		DBG("Shell not managed");
-		return;
-	}
-
-	for (auto [idx, user_ref] : list()) {
-		user_ref.get().shell->output()
-			<< "*** " << from_ref->name << " yelled ***: "
-			<< msg << std::endl;
-	}
-}
-
-void UserManager::rename(const Shell *shell_ptr, const std::string name) {
-	auto user_ref = get_ref(shell_ptr);
+bool UserManager::rename(const int idx, const std::string name) {
+	auto user_ref = get_ref(idx);
 	
 	if (user_ref == nullptr) {
 		DBG("Shell not managed");
-		return;
+		return true;
 	}
 	
 	const auto users = list();
@@ -72,7 +39,7 @@ void UserManager::rename(const Shell *shell_ptr, const std::string name) {
 		user_ref->shell->error()
 			<< "*** User '" << name << "' already exists. ***" << std::endl;
 
-		return;
+		return false;
 	}
 
 	user_ref->name = name;
@@ -82,4 +49,6 @@ void UserManager::rename(const Shell *shell_ptr, const std::string name) {
 		<< ":" << user_ref->port << " is named '" << name << "'. ***"
 		<< std::endl;
 	broadcast(ss.str());
+
+	return true;
 }
