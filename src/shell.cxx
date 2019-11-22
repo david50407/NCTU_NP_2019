@@ -19,6 +19,10 @@ using Npshell::Command;
 using Npshell::SignalHandler;
 using Npshell::shell_exited;
 
+const std::string Shell::WHO_HEADER = {
+	"<ID>\t<nickname>\t<IP:port>\t<indicate me>"
+};
+
 Shell::Shell()
 	: pm(this), envs({{ "PATH", "bin:." }})
 	, input_stream_(nullptr), output_stream_(nullptr), error_stream_(nullptr) {
@@ -100,6 +104,8 @@ bool Shell::builtin_command(const Command::Chain &chain) {
 		|| builtin_command_printenv(chain)
 		|| builtin_command_yell(chain)
 		|| builtin_command_tell(chain)
+		|| builtin_command_rename(chain)
+		|| builtin_command_who(chain)
 		;
 }
 
@@ -166,20 +172,12 @@ bool Shell::builtin_command_yell(const Command::Chain &chain) {
 		return true;
 	}
 
-	const auto user = binded_user_manager_->get(this);
-	if (!user) {
-		DBG("Not registered to user manager");
-		return false;
-	}
-
-	std::stringstream message;
-	message << "*** " << user->name << " yelled ***:";
-	for (auto it = ++args.begin(); it != args.end(); ++it) {
+	std::stringstream message(args[1]);
+	for (auto it = args.begin() + 2; it != args.end(); ++it) {
 		message << " " << *it;
 	}
-	message << std::endl;
 
-	binded_user_manager_->broadcast(message.str());
+	binded_user_manager_->broadcast(message.str(), this);
 
 	return true;
 }
@@ -194,25 +192,59 @@ bool Shell::builtin_command_tell(const Command::Chain &chain) {
 		return true;
 	}
 
-	const auto user = binded_user_manager_->get(this);
-	if (!user) {
-		DBG("Not registered to user manager");
-		return false;
-	}
-
 	auto target_idx = ::atoi(args[1].c_str());
-	std::stringstream message;
-	message << "*** " << user->name << " told you ***:";
-	for (auto it = args.begin() + 2; it != args.end(); ++it) {
+	std::stringstream message(args[2]);
+	for (auto it = args.begin() + 3; it != args.end(); ++it) {
 		message << " " << *it;
 	}
-	message << std::endl;
 
-	if (!binded_user_manager_->tell(message.str(), { target_idx })) {
+	if (!binded_user_manager_->tell(message.str(), target_idx, this)) {
 		error() 
 			<< "*** Error: user #" << target_idx 
 			<< " does not exist yet. ***" << std::endl;
 	}
+
+	return true;
+}
+
+bool Shell::builtin_command_rename(const Command::Chain &chain) {
+	if (binded_user_manager_ == nullptr) { return false; }
+	if (chain.front().get_args()[0] != "rename") { return false; }
+
+	const auto &args = chain.front().get_args();
+	if (args.size() != 2) {
+		DBG("Usage: rename [new-name]");
+		return true;
+	}
+
+	binded_user_manager_->rename(this, args[1]);
+
+	return true;
+}
+
+bool Shell::builtin_command_who(const Command::Chain &chain) {
+	if (binded_user_manager_ == nullptr) { return false; }
+	if (chain.front().get_args()[0] != "who") { return false; }
+
+	const auto &args = chain.front().get_args();
+	if (args.size() != 1) {
+		DBG("Usage: who");
+		return true;
+	}
+
+	std::stringstream ss;
+	ss << WHO_HEADER;
+	for (auto [idx, user_ref] : binded_user_manager_->list()) {
+		ss << std::endl
+			<< idx << "\t"
+			<< user_ref.get().name << "\t"
+			<< user_ref.get().address << ":" << user_ref.get().port
+			;
+		if (user_ref.get().shell.get() == this) {
+			ss << "\t<-me";
+		}
+	}
+	output() << ss.str() << std::endl;
 
 	return true;
 }

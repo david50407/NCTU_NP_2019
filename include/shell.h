@@ -67,6 +67,7 @@ namespace Npshell {
 			std::shared_ptr<std::ostream> output_stream_;
 			std::shared_ptr<std::ostream> error_stream_;
 			bool welcome_ = false;
+			static const std::string WHO_HEADER;
 
 		private:
 			void register_signal();
@@ -79,6 +80,8 @@ namespace Npshell {
 			bool builtin_command_printenv(const Command::Chain &);
 			bool builtin_command_yell(const Command::Chain &);
 			bool builtin_command_tell(const Command::Chain &);
+			bool builtin_command_rename(const Command::Chain &);
+			bool builtin_command_who(const Command::Chain &);
 	};
 }; // namespace Npshell
 

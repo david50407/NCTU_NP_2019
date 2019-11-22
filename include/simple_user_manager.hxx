@@ -81,6 +81,26 @@ namespace Npshell {
 				return list;
 			}
 
+		protected:
+			UserInfo *get_ref(int idx) override {
+				if (idx >= MAX_USERS) { return nullptr; }
+				if (!__users[idx]) { return nullptr; }
+				
+				return &(*__users[idx]);
+			}
+			UserInfo *get_ref(const Shell *shell_ptr) override {
+				auto it = std::find_if(__users.begin(), __users.end(), [shell_ptr] (auto &info) -> bool {
+					return info
+						? info->shell.get() == shell_ptr
+						: false;
+				});
+
+				if (it == __users.end()) { return nullptr; }
+				if (!*it) { return nullptr; }
+
+				return &(**it);
+			}
+
 		private:
 			inline static const std::string GREETING_MESSAGE = {
 				"****************************************\n"
