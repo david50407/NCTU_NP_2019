@@ -7,6 +7,9 @@
 #include <list>
 #include <utility>
 #include <sstream>
+#include <exception>
+
+#include <fdpipe.hxx>
 
 namespace Npshell {
 	class Shell;
@@ -21,6 +24,18 @@ namespace Npshell {
 	class UserManager {
 		public:
 			struct Binder;
+			class already_piped : public std::exception {
+				public:
+					const char* what() const throw () override { return "Already piped with target"; }
+			}; // class already_piped
+			class pipe_not_exists : public std::exception {
+				public:
+					const char* what() const throw () override { return "Not piped with sender yet"; }
+			}; // class pipe_not_exists
+			class user_not_exists : public std::exception {
+				public:
+					const char* what() const throw () override { return "User not exists"; }
+			}; // class user_not_exists
 
 		protected:
 			using OptionalUserInfo = std::optional<UserInfo>;
@@ -29,7 +44,6 @@ namespace Npshell {
 		public:
 			virtual int insert(UserInfo) = 0;
 			virtual OptionalUserInfo get(int) = 0;
-			virtual OptionalUserInfo get(const Shell *) = 0;
 			virtual bool remove(int) = 0;
 			virtual const std::list<std::pair<int, const std::reference_wrapper<const UserInfo>>> list() const = 0;
 
@@ -37,9 +51,11 @@ namespace Npshell {
 			virtual bool tell(const int, const std::string);
 			virtual bool rename(const int, const std::string);
 
+			virtual fdpipe createPipe(const int, const int) = 0;
+			virtual fdpipe removePipe(const int, const int) = 0;
+
 		protected:
 			virtual UserInfo *get_ref(int) = 0;
-			virtual UserInfo *get_ref(const Shell *) = 0;
 	}; // class UserManager
 
 	struct UserManager::Binder {
@@ -67,6 +83,43 @@ namespace Npshell {
 			}
 			inline const bool rename(const std::string name) {
 				return um_->rename(idx_, name);
+			}
+			inline const int pipeTo(const int idx, const std::string command = "") {
+				auto user = um_->get(idx); 
+				if (!user) {
+					throw user_not_exists();
+				}
+
+				auto pipe = um_->createPipe(idx_, idx);
+
+				std::stringstream ss;
+				ss << "*** " << um_->get(idx_)->name
+					<< " (#" << idx_ << ") just piped '"
+					<< command << "' to " << user->name
+					<< " (#" << idx << ") ***"
+					<< std::endl;
+				um_->broadcast(ss.str());
+
+				return pipe.output();
+			}
+			inline const int pipeFrom(const int idx, const std::string command = "") {
+				auto user = um_->get(idx);
+				if (!user) {
+					throw user_not_exists();
+				}
+
+				auto pipe = um_->removePipe(idx, idx_);
+
+				if (command.size() > 0) {
+					std::stringstream ss;
+					ss << "*** " << um_->get(idx_)->name
+						<< " (#" << idx_ << ") just received from " << user->name
+						<< " (#" << idx << ") by '" << command << "' ***"
+						<< std::endl;
+					um_->broadcast(ss.str());
+				}
+
+				return pipe.input();
 			}
 
 		private:

@@ -8,7 +8,9 @@
 #include <sstream>
 #include <type_traits>
 #include <algorithm>
+#include <map>
 
+#include <util.h>
 #include <logger.hxx>
 #include <user_manager.h>
 
@@ -30,7 +32,7 @@ namespace Npshell {
 				*it = std::make_optional(info);
 
 				auto idx = it - __users.begin();
-				info.shell->bind_to_user_manager(std::make_unique<Binder>(idx, this));
+				info.shell->bind_to_user_manager(std::make_shared<Binder>(idx, this));
 
 				greeting(idx);
 
@@ -42,17 +44,6 @@ namespace Npshell {
 					: __users[idx]
 				;
 			}
-			OptionalUserInfo get(const Shell *shell_ptr) override {
-				auto it = std::find_if(__users.begin(), __users.end(), [shell_ptr] (auto &info) -> bool {
-					return info
-						? info->shell.get() == shell_ptr
-						: false;
-				});
-
-				return it == __users.end()
-					? std::nullopt
-					: *it;
-			}
 			bool remove(int idx) override {
 				if (idx >= MAX_USERS) { return false; }
 
@@ -63,6 +54,18 @@ namespace Npshell {
 				*it = std::nullopt;
 
 				goodbye(username);
+				
+				// Cleanup pipes
+				for (auto it = pipes__.begin(); it != pipes__.end(); ) {
+					if (it->first.first == idx || it->first.second == idx) {
+						::close(it->second.input());
+						::close(it->second.output());
+						it = pipes__.erase(it);
+					} else {
+						++it;
+					}
+				}
+
 				return true;
 			}
 			const std::list<std::pair<int, const std::reference_wrapper<const UserInfo>>> list() const override {
@@ -81,6 +84,34 @@ namespace Npshell {
 
 				return list;
 			}
+			
+			virtual fdpipe createPipe(const int from, const int to) override {
+				auto ident = std::make_pair(from, to);
+
+				if (auto it = pipes__.find(ident); it != pipes__.end()) {
+					throw already_piped();
+				}
+
+				try {
+					pipes__.emplace(ident, fdpipe{});
+				} catch (fdpipe::cannot_create_pipe ex) {
+					return fdpipe{-1, -1};
+				}
+
+				return pipes__[ident];
+			}
+			virtual fdpipe removePipe(const int from, const int to) override {
+				if (auto it = pipes__.find(std::make_pair(from, to));
+					it == pipes__.end()) {
+					throw pipe_not_exists();
+				} else {
+					auto pipe = it->second;
+					pipes__.erase(it);
+
+					::close(pipe.output());
+					return pipe;
+				}
+			}
 
 		protected:
 			UserInfo *get_ref(int idx) override {
@@ -88,18 +119,6 @@ namespace Npshell {
 				if (!__users[idx]) { return nullptr; }
 				
 				return &(*__users[idx]);
-			}
-			UserInfo *get_ref(const Shell *shell_ptr) override {
-				auto it = std::find_if(__users.begin(), __users.end(), [shell_ptr] (auto &info) -> bool {
-					return info
-						? info->shell.get() == shell_ptr
-						: false;
-				});
-
-				if (it == __users.end()) { return nullptr; }
-				if (!*it) { return nullptr; }
-
-				return &(**it);
 			}
 
 		private:
@@ -109,6 +128,7 @@ namespace Npshell {
 				"****************************************\n"
 			};
 			std::vector<OptionalUserInfo> __users;
+			std::map<std::pair<int, int>, fdpipe> pipes__;
 
 		private:
 			inline void greeting(int idx) {

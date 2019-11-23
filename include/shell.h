@@ -57,16 +57,26 @@ namespace Npshell {
 			std::ostream &error() {
 				return error_stream_ ? *error_stream_ : (output_stream_ ? *output_stream_ : std::cerr);
 			}
-			void bind_to_user_manager(std::unique_ptr<UserManager::Binder> binder) {
-				binded_user_manager_ = std::move(binder);
+			void bind_to_user_manager(std::shared_ptr<UserManager::Binder> binder) {
+				binded_user_manager_ = binder;
+			}
+			UserManager::Binder *user_manager() {
+				return binded_user_manager_.get();
+			}
+			const bool binded_to_user_manager() {
+				return binded_user_manager_ != nullptr;
+			}
+			const std::string last_command() {
+				return last_command_;
 			}
 
 		private:
-			std::unique_ptr<UserManager::Binder> binded_user_manager_ = nullptr;
+			std::shared_ptr<UserManager::Binder> binded_user_manager_ = nullptr;
 			std::shared_ptr<std::istream> input_stream_;
 			std::shared_ptr<std::ostream> output_stream_;
 			std::shared_ptr<std::ostream> error_stream_;
 			bool welcome_ = false;
+			std::string last_command_ = "";
 			static const std::string WHO_HEADER;
 
 		private:

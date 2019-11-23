@@ -10,11 +10,12 @@ using Npshell::Command;
 
 Command::Command() : Command{std::initializer_list<std::string>{}} {}
 Command::Command(const std::initializer_list<std::string> args) :
-	args(args), redirect_out(""), pipe_to_n(-1), pipe_stderr(false) {}
+	args(args) {}
 
 Command::~Command() {}
 
-std::list<Command::Chain> Command::parse_commands(const std::string &str) {
+std::list<Command::Chain>
+Command::parse_commands(const std::string &str, const bool multi_user) {
 	std::list<Command::Chain> chains = { { Command() } };
 	Command::Cmdlist args = { "" };
 	
@@ -27,6 +28,10 @@ std::list<Command::Chain> Command::parse_commands(const std::string &str) {
 					args.emplace_back(std::string());
 				}
 				break;
+			case '<':
+				if (!multi_user) {
+					goto default__;
+				}
 			case '>':
 			case '|':
 			case '!':
@@ -36,7 +41,11 @@ std::list<Command::Chain> Command::parse_commands(const std::string &str) {
 				args.back() += *it;
 				break;
 			default:
-				if (!now.empty() && (now[0] == '|' || now[0] == '!')) { // Pipe to n-th command
+			default__: ;
+				if (!now.empty() && (
+						now[0] == '|' || now[0] == '!' // Pipe to n-th command
+						|| (multi_user && (now[0] == '<' || now[0] == '>')) // Pipe to/from user
+					)) {
 					if (*it < '0' || '9' < *it) {
 						goto syntax_error;
 					} 
@@ -76,6 +85,12 @@ std::list<Command::Chain> Command::parse_commands(const std::string &str) {
 				now.pipe_to_n = ::atoi(it->c_str() + 1);
 				now.pipe_stderr = pipe_type == '!';
 				chains.emplace_back(Command::Chain{ Command() });
+				continue;
+			case '>':
+				now.pipe_to_uid = ::atoi(it->c_str() + 1);
+				continue;
+			case '<':
+				now.pipe_from_uid = ::atoi(it->c_str() + 1);
 				continue;
 		}
 		if (now.redirect_out.size() > 0)

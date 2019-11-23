@@ -64,7 +64,7 @@ void Shell::run() {
 
 void Shell::yield() {
 	if (welcome_) {
-		const auto cmd_chains = Command::parse_commands(read_command());
+		const auto cmd_chains = Command::parse_commands(read_command(), binded_to_user_manager());
 		if (cmd_chains.size() == 0) {
 			return;
 		}
@@ -93,6 +93,7 @@ std::string Shell::read_command() {
 		return "exit";
 	}
 
+	last_command_ = cmd;
 	return cmd;
 }
 

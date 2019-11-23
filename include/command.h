@@ -14,9 +14,11 @@ namespace Npshell {
 		
 		private:
 			std::vector<std::string> args;
-			std::string redirect_out;
-			int pipe_to_n;
-			bool pipe_stderr;
+			std::string redirect_out = "";
+			int pipe_to_n = -1;
+			bool pipe_stderr = false;
+			int pipe_to_uid = -1;
+			int pipe_from_uid = -1;
 
 		public:
 			Command();
@@ -26,7 +28,10 @@ namespace Npshell {
 			std::string get_redirect_out() { return redirect_out; }
 			int pipe_to() const { return pipe_to_n; }
 			bool redirect_stderr() const { return pipe_stderr; }
-			static std::list<Chain> parse_commands(const std::string &);
+			int to_uid() const { return pipe_to_uid; }
+			int from_uid() const { return pipe_from_uid; }
+
+			static std::list<Chain> parse_commands(const std::string &, const bool);
 	};
 }; // namespace Npshell
 

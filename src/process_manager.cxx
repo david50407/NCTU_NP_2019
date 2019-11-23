@@ -58,6 +58,43 @@ void ProcessManager::execute_commands(const Command::Chain &chain) {
 
 		auto &process = pl.back();
 
+		std::stringstream error_ss;
+		bool force_close_input = false;
+		// Prepare for pipe from uid
+		if (auto uid = process.cmd.from_uid(); uid != -1) {
+			try {
+				auto fd = __shell.user_manager()->pipeFrom(uid, __shell.last_command());
+				process.fd[PipeIn] = fd;
+			} catch (UserManager::user_not_exists ex) {
+				error_ss << "*** Error: user #" << uid << " does not exist yet. ***"
+					<< std::endl;
+				force_close_input = true;
+			} catch (UserManager::pipe_not_exists ex) {
+				error_ss << "*** Error: the pipe #" << uid
+					<< "->#" << __shell.user_manager()->id() << " does not exist yet. ***"
+					<< std::endl;
+				force_close_input = true;
+			}
+		}
+
+		// Prepare for pipe to uid
+		bool force_close_output = false;
+		if (auto uid = process.cmd.to_uid(); uid != -1) {
+			try {
+				auto fd = __shell.user_manager()->pipeTo(uid, __shell.last_command());
+				process.fd[PipeOut] = fd;
+			} catch (UserManager::user_not_exists ex) {
+				error_ss << "*** Error: user #" << uid << " does not exist yet. ***"
+					<< std::endl;
+				force_close_output = true;
+			} catch (UserManager::already_piped ex) {
+				error_ss << "*** Error: the pipe #" << __shell.user_manager()->id()
+					<< "->#" << uid << " already exists. ***"
+					<< std::endl;
+				force_close_output = true;
+			}
+		}
+
 		int forksleep = 1;
 		while ((process.pid = ::fork()) < 0 && errno == EAGAIN) {
 			DBG("fork: retry: " << ::strerror(errno));
@@ -105,6 +142,18 @@ void ProcessManager::execute_commands(const Command::Chain &chain) {
 		} else if (int fd = __shell.getOutputFd(); fd != PipeOut) {
 			::dup2(fd, PipeOut);
 			::dup2(fd, PipeErr);
+		}
+
+		if (force_close_input) {
+			::freopen("/dev/null", "r", stdin);
+		}
+
+		if (force_close_output) {
+			::freopen("/dev/null", "w", stdout);
+		}
+
+		if (auto error_msg = error_ss.str(); error_msg.size() > 0) {
+			std::cerr << error_msg << std::flush;
 		}
 
 		Util::execvpe(process.cmd.get_args()[0], process.cmd.get_args(), __shell.envs);
