@@ -235,13 +235,13 @@ bool Shell::builtin_command_who(const Command::Chain &chain) {
 
 	std::stringstream ss;
 	ss << WHO_HEADER;
-	for (auto [idx, user_ref] : binded_user_manager_->list()) {
+	for (auto [idx, user] : binded_user_manager_->list()) {
 		ss << std::endl
 			<< idx << "\t"
-			<< user_ref.get().name << "\t"
-			<< user_ref.get().address << ":" << user_ref.get().port
+			<< user.name << "\t"
+			<< user.address << ":" << user.port
 			;
-		if (user_ref.get().shell.get() == this) {
+		if (idx == binded_user_manager_->id()) {
 			ss << "\t<-me";
 		}
 	}

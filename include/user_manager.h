@@ -40,22 +40,20 @@ namespace Npshell {
 		protected:
 			using OptionalUserInfo = std::optional<UserInfo>;
 			static const int MAX_USERS = 31;
+			static const std::string GREETING_MESSAGE;
 
 		public:
 			virtual int insert(UserInfo) = 0;
 			virtual OptionalUserInfo get(int) = 0;
 			virtual bool remove(int) = 0;
-			virtual const std::list<std::pair<int, const std::reference_wrapper<const UserInfo>>> list() const = 0;
+			virtual std::list<std::pair<int, UserInfo>> list() const = 0;
 
-			virtual void broadcast(const std::string);
-			virtual bool tell(const int, const std::string);
-			virtual bool rename(const int, const std::string);
+			virtual void broadcast(const std::string) = 0;
+			virtual bool tell(const int, const std::string) = 0;
+			virtual bool rename(const int, const std::string) = 0;
 
 			virtual fdpipe createPipe(const int, const int) = 0;
 			virtual fdpipe removePipe(const int, const int) = 0;
-
-		protected:
-			virtual UserInfo *get_ref(int) = 0;
 	}; // class UserManager
 
 	struct UserManager::Binder {

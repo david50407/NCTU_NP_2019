@@ -24,9 +24,15 @@ namespace Npshell {
 				std::signal(SIGCHLD, [] (int signal) {
 						trigger(signal);
 				});
+				std::signal(SIGUSR1, [] (int signal) {
+						trigger(signal);
+				});
 			}
 			static void subscribe(const int signal, const Callback &callback) {
 				__subscribers[signal].push_back(callback);
+			}
+			static void cleanup(const int signal) {
+				__subscribers[signal].clear();
 			}
 			static void trigger(const int signal) {
 				for (auto &callback : __subscribers[signal]) {

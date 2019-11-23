@@ -68,21 +68,66 @@ namespace Npshell {
 
 				return true;
 			}
-			const std::list<std::pair<int, const std::reference_wrapper<const UserInfo>>> list() const override {
-				typename std::remove_const<decltype(list())>::type list;
+			std::list<std::pair<int, UserInfo>> list() const override {
+				std::list<std::pair<int, UserInfo>> list;
 
 				for (auto it = ++(__users.begin()); it != __users.end(); ++it) {
 					if (*it) {
 						list.emplace_back(
-							std::make_pair<int, std::reference_wrapper<const UserInfo>>(
+							std::make_pair(
 								it - __users.begin(),
-								std::cref(**it)
+								**it
 							)
 						);
 					}
 				}
 
 				return list;
+			}
+
+			bool tell(const int idx, const std::string msg) {
+				if (auto user = get(idx); user) {
+					user->shell->output() << msg << std::flush;
+					return true;
+				}
+
+				return false;
+			}
+
+			void broadcast(const std::string msg) {
+				for (auto [idx, user] : list()) {
+					user.shell->output() << msg << std::flush;
+				}
+			}
+
+			bool rename(const int idx, const std::string name) {
+				auto user_ref = get_ref(idx);
+				
+				if (user_ref == nullptr) {
+					DBG("Shell not managed");
+					return true;
+				}
+				
+				const auto users = list();
+				if (const auto it = std::find_if(
+						users.begin(), users.end(),
+						[name] (auto &pair) { return pair.second.name == name; }
+					); it != users.end()) {
+					user_ref->shell->error()
+						<< "*** User '" << name << "' already exists. ***" << std::endl;
+
+					return false;
+				}
+
+				user_ref->name = name;
+
+				std::stringstream ss;
+				ss << "*** User from " << user_ref->address
+					<< ":" << user_ref->port << " is named '" << name << "'. ***"
+					<< std::endl;
+				broadcast(ss.str());
+
+				return true;
 			}
 			
 			virtual fdpipe createPipe(const int from, const int to) override {
@@ -114,7 +159,7 @@ namespace Npshell {
 			}
 
 		protected:
-			UserInfo *get_ref(int idx) override {
+			UserInfo *get_ref(int idx) {
 				if (idx >= MAX_USERS) { return nullptr; }
 				if (!__users[idx]) { return nullptr; }
 				
@@ -122,11 +167,6 @@ namespace Npshell {
 			}
 
 		private:
-			inline static const std::string GREETING_MESSAGE = {
-				"****************************************\n"
-				"** Welcome to the information server. **\n"
-				"****************************************\n"
-			};
 			std::vector<OptionalUserInfo> __users;
 			std::map<std::pair<int, int>, fdpipe> pipes__;
 
