@@ -3,7 +3,7 @@ CCFLAGS:= -I./include
 CXX:= g++
 CXXFLAGS:= -I./include --std=c++17 -fPIC -fpermissive
 LD:= g++
-LDFLAGS:= $(CXXFLAGS) -lrt
+LDFLAGS:= $(CXXFLAGS) -lrt -lstdc++fs
 SRC_PATH:= src/
 BUILD_PATH:= build/
 SHARED_OBJS:= $(addprefix $(BUILD_PATH), shell.o command.o util.o process_manager.o signal_handler.o socket_server.o user_manager.o)
@@ -24,4 +24,4 @@ $(BUILD_PATH)%.o: $(SRC_PATH)%.cxx
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(EXECS): %: $(BUILD_PATH)entry_%.o $(SHARED_OBJS)
-	$(LD) $(LDFLAGS) -o $@ $< $(SHARED_OBJS)
+	$(LD) -o $@ $< $(SHARED_OBJS) $(LDFLAGS) 

@@ -27,6 +27,9 @@ namespace Npshell {
 				std::signal(SIGUSR1, [] (int signal) {
 						trigger(signal);
 				});
+				std::signal(SIGUSR2, [] (int signal) {
+						trigger(signal);
+				});
 			}
 			static void subscribe(const int signal, const Callback &callback) {
 				__subscribers[signal].push_back(callback);
@@ -47,6 +50,8 @@ namespace Npshell {
 				std::signal(SIGQUIT, SIG_DFL);
 				std::signal(SIGTSTP, SIG_DFL);
 				std::signal(SIGCONT, SIG_DFL);
+				std::signal(SIGUSR1, SIG_DFL);
+				std::signal(SIGUSR2, SIG_DFL);
 			}
 
 		private:

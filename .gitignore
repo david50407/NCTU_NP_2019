@@ -8,4 +8,5 @@ work_dir/
 build/
 /npshell
 /np_simple
-/np_simple_proc
+/np_single_proc
+/np_multi_proc

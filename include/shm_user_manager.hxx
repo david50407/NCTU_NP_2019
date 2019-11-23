@@ -5,6 +5,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <atomic>
+#include <vector>
+#if __cpp_lib_filesystem
+	#include <filesystem>
+#else
+	#include <experimental/filesystem>
+#endif
 #include <cstring>
 
 #include <util.h>
@@ -13,6 +19,13 @@
 #include <signal_handler.hxx>
 
 #define SHM_NAME "/0756125-npshell-shm"
+#define FIFO_PATH "user_pipe/"
+
+#if __cpp_lib_filesystem
+	namespace fs = std::filesystem;
+#else
+	namespace fs = std::experimental::filesystem;
+#endif
 
 namespace Npshell {
 	struct ShmUserInfo {
@@ -22,6 +35,7 @@ namespace Npshell {
 		unsigned int port;
 		char name[21];
 		char message[2049];
+		int check_pipe;
 	}; // struct ShmUserInfo
 
 	struct ShmContainer {
@@ -43,6 +57,8 @@ namespace Npshell {
 
 				shm__ = (struct ShmContainer *)
 					::mmap(nullptr, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shmfd__, 0);
+
+				::mkdir(FIFO_PATH, 0700);
 			}
 			~ShmUserManager() {
 				dispose();
@@ -70,7 +86,7 @@ namespace Npshell {
 				});
 
 				info.shell->bind_to_user_manager(std::make_shared<Binder>(idx, this));
-				info.shell->output() << GREETING_MESSAGE << std::endl;
+				info.shell->output() << GREETING_MESSAGE << std::flush;
 				binded_shell_idx = idx;
 				binded_shell = info.shell.get();
 
@@ -82,6 +98,12 @@ namespace Npshell {
 				return idx;
 			}
 			OptionalUserInfo get(int idx) override {
+				auto users = list();
+
+				for (auto [idx_, user] : users) {
+					if (idx_ == idx) { return std::make_optional(user); }
+				}
+				return std::nullopt;
 			}
 			bool remove(int idx) override {
 				std::string username = shm__->users[idx].name;
@@ -96,6 +118,15 @@ namespace Npshell {
 				broadcast(ss.str());
 
 				// Cleanup pipes
+				for (int i = 1; i != MAX_USERS; ++i) {
+					std::stringstream ss;
+					ss << FIFO_PATH << idx << "-" << i << ".pipe";
+					::unlink(ss.str().c_str());
+					
+					std::stringstream ss2;
+					ss2 << FIFO_PATH << i << "-" << idx << ".pipe";
+					::unlink(ss2.str().c_str());
+				}
 			}
 			std::list<std::pair<int, UserInfo>> list() const override {
 				std::list<std::pair<int, UserInfo>> list;
@@ -176,11 +207,50 @@ namespace Npshell {
 				return true;
 			}
 
-			virtual fdpipe createPipe(const int from, const int to) override {
-				throw;
+			virtual fdpipe createPipe(const int from_, const int to) override {
+				std::stringstream ss;
+				ss << FIFO_PATH << binded_shell_idx << "-" << to << ".pipe";
+				const auto pipe_file = ss.str();
+
+				DBG("Try to create user pipe: " << pipe_file);
+				if (fs::exists(pipe_file)) {
+					throw already_piped();
+				}
+				if (auto status = ::mkfifo(pipe_file.c_str(), 0600); status == EEXIST) {
+					throw already_piped();
+				}
+
+				DBG("Created pipe: " << pipe_file);
+				synchronous([&] () {
+					shm__->users[to].check_pipe = binded_shell_idx;
+				});
+				::kill(shm__->users[to].pid, SIGUSR2);
+
+				return fdpipe(
+					-1,
+					::open(pipe_file.c_str(), O_WRONLY)
+				);
 			}
-			virtual fdpipe removePipe(const int from, const int to) override {
-				throw;
+			virtual fdpipe removePipe(const int from, const int to_) override {
+				auto fd = from_pipe_fds__[from];
+				if (fd == -1) {
+					throw pipe_not_exists();
+				}
+				from_pipe_fds__[from] = -1;
+
+				std::stringstream ss;
+				ss << FIFO_PATH << from << "-" << binded_shell_idx << ".pipe";
+
+				const auto pipe_path = ss.str();
+				if (!fs::exists(pipe_path)) {
+					throw pipe_not_exists();
+				}
+				::unlink(pipe_path.c_str());
+
+				return fdpipe(
+					fd,
+					-1
+				);
 			}
 
 			void dispose() {
@@ -190,6 +260,14 @@ namespace Npshell {
 
 			static void cleanup_shm() {
 				::shm_unlink(SHM_NAME);
+
+				for (int i = 1; i != MAX_USERS; ++i) {
+					for (int j = 1; j != MAX_USERS; ++j) {
+						std::stringstream ss;
+						ss << FIFO_PATH << i << "-" << j << ".pipe";
+						::unlink(ss.str().c_str());
+					}
+				}
 			}
 
 		private:
@@ -197,13 +275,17 @@ namespace Npshell {
 			ShmContainer *shm__ = nullptr;
 			int binded_shell_idx = -1;
 			Shell *binded_shell = nullptr;
+			std::vector<int> from_pipe_fds__ = {MAX_USERS, -1};
 
 			inline static const auto SHM_SIZE = sizeof(struct ShmContainer) + sizeof(struct ShmUserInfo) * MAX_USERS;
 
 			void synchronous(std::function<void ()> cb) {
-				while (shm__->lock.test_and_set()) ;
+				DBG("Waiting for lock, pid: " << getpid());
+				while (shm__->lock.test_and_set(std::memory_order_acquire)) ;
+				DBG("Win the lock, pid: " << getpid());
 				cb();
-				shm__->lock.clear();
+				shm__->lock.clear(std::memory_order_release);
+				DBG("Release lock, pid: " << getpid());
 			}
 
 			void setup_signal() {
@@ -217,6 +299,22 @@ namespace Npshell {
 					});
 
 					binded_shell->output() << msg << std::flush;
+				});
+				
+				SignalHandler::subscribe(SIGUSR2, [&] (const int _signal) {
+					if (shm__->users[binded_shell_idx].idx != binded_shell_idx) { return; }
+					if (shm__->users[binded_shell_idx].check_pipe == 0) { return; }
+
+					int uid = shm__->users[binded_shell_idx].check_pipe;
+					synchronous([&] () {
+						shm__->users[binded_shell_idx].check_pipe = 0;
+					});
+
+					std::stringstream ss;
+					ss << FIFO_PATH << uid << "-" << binded_shell_idx << ".pipe";
+
+					const auto pipe_path = ss.str();
+					from_pipe_fds__[uid] = ::open(pipe_path.c_str(), O_RDONLY);
 				});
 			}
 	}; // class ShmUserManager
