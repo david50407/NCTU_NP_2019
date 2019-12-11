@@ -173,7 +173,8 @@ bool Shell::builtin_command_yell(const Command::Chain &chain) {
 		return true;
 	}
 
-	std::stringstream message(args[1]);
+	std::stringstream message;
+	message << args[1];
 	for (auto it = args.begin() + 2; it != args.end(); ++it) {
 		message << " " << *it;
 	}
@@ -194,7 +195,8 @@ bool Shell::builtin_command_tell(const Command::Chain &chain) {
 	}
 
 	auto target_idx = ::atoi(args[1].c_str());
-	std::stringstream message(args[2]);
+	std::stringstream message;
+	message << args[2];
 	for (auto it = args.begin() + 3; it != args.end(); ++it) {
 		message << " " << *it;
 	}
@@ -210,11 +212,11 @@ bool Shell::builtin_command_tell(const Command::Chain &chain) {
 
 bool Shell::builtin_command_rename(const Command::Chain &chain) {
 	if (binded_user_manager_ == nullptr) { return false; }
-	if (chain.front().get_args()[0] != "rename") { return false; }
+	if (chain.front().get_args()[0] != "name") { return false; }
 
 	const auto &args = chain.front().get_args();
 	if (args.size() != 2) {
-		DBG("Usage: rename [new-name]");
+		DBG("Usage: name [new-name]");
 		return true;
 	}
 

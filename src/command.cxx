@@ -29,10 +29,10 @@ Command::parse_commands(const std::string &str, const bool multi_user) {
 				}
 				break;
 			case '<':
+			case '>':
 				if (!multi_user) {
 					goto default__;
 				}
-			case '>':
 			case '|':
 			case '!':
 				if (now.size() > 0) {
